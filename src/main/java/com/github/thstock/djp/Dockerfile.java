@@ -1,7 +1,9 @@
 package com.github.thstock.djp;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -41,6 +43,8 @@ public class Dockerfile {
         throw new IllegalStateException("Dockerfile cannot be empty");
       }
       return lines;
+    } catch (FileNotFoundException e) {
+      throw new UncheckedIOException(e.getMessage(), e);
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }

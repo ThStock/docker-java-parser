@@ -3,6 +3,7 @@ package com.github.thstock.djp;
 import static org.junit.Assert.assertEquals;
 
 import java.io.File;
+import java.io.UncheckedIOException;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
@@ -49,6 +50,18 @@ public class DockerfileTest {
 
     // THEN
     assertEquals(99, testee.lines.size());
+
+  }
+
+  @Test
+  public void test_file_not_existing() {
+    // GIVEN
+    File content = new File("n.a");
+
+    // WHEN / THEN
+    Assertions.assertThatExceptionOfType(UncheckedIOException.class)
+        .isThrownBy(() -> Dockerfile.parse(content))
+        .withMessage("n.a (No such file or directory)");
 
   }
 }
