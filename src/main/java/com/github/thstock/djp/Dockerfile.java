@@ -26,7 +26,7 @@ public class Dockerfile {
     lines = lines(content);
   }
 
-  private ImmutableList<String> lines(String content) {
+  private static ImmutableList<String> lines(String content) {
     return toLines(CharSource.wrap(content));
   }
 
@@ -36,16 +36,11 @@ public class Dockerfile {
 
   private static ImmutableList<String> toLines(CharSource charSource) {
     try {
-      return charSource.readLines();
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
-    }
-  }
-
-  static String resourceString(String resouce) {
-    URL resource = Resources.getResource(resouce);
-    try {
-      return Resources.toString(resource, StandardCharsets.UTF_8);
+      ImmutableList<String> lines = charSource.readLines();
+      if (lines.isEmpty() || XStream.from(lines.stream()).filterNot(l -> l.trim().isEmpty()).isEmpty()) {
+        throw new IllegalStateException("Dockerfile cannot be empty");
+      }
+      return lines;
     } catch (IOException e) {
       throw new IllegalStateException(e);
     }
