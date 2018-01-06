@@ -50,4 +50,9 @@ public class XStreamTest {
   public void test_map_last() {
     assertEquals("-a2", XStream.from("-a").map(in -> in + "2").last());
   }
+
+  @Test
+  public void test_head() {
+    assertEquals("1", XStream.from("2", "1").head());
+  }
 }

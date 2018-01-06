@@ -18,14 +18,39 @@ import com.google.common.io.Resources;
 
 public class Dockerfile {
   private static final Logger LOGGER = LoggerFactory.getLogger(Dockerfile.class);
+  private static final String FROM = "FROM";
+  private static final String LABEL = "LABEL";
+  private static final String ENV = "ENV";
+  private static final String RUN = "RUN";
+  private final String LC = "\\";
+  private final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, LABEL, ENV, RUN);
+  final ImmutableList<String> allLines;
   final ImmutableList<String> lines;
 
-  Dockerfile(File file) {
-    lines = lines(file);
+  Dockerfile(File file, boolean strict) {
+    this(lines(file), strict);
   }
 
-  Dockerfile(String content) {
-    lines = lines(content);
+  Dockerfile(String content, boolean strict) {
+    this(lines(content), strict);
+  }
+
+  Dockerfile(ImmutableList<String> allLines, boolean strict) {
+    this.allLines = allLines;
+    this.lines = XStream.from(allLines).filterNot(in -> in.trim().isEmpty()).toList();
+
+    ImmutableList<String> potentialTokens = XStream.from(lines)
+        .map(in -> in.replaceFirst("(^[^ \t]+).*", "$1"))
+        .toList();
+    ImmutableList<String> invalids = XStream.from(potentialTokens)
+        .filterNot(tokens::contains)
+        .toList();
+    if (!invalids.isEmpty()) {
+      throw new IllegalStateException("invalid token(s): " + invalids);
+    }
+    if (strict && !XStream.from(potentialTokens).head().equals(FROM)) {
+      throw new IllegalStateException("Dockerfile must start with FROM");
+    }
   }
 
   private static ImmutableList<String> lines(String content) {
@@ -59,18 +84,32 @@ public class Dockerfile {
     }
   }
 
+  /**
+   * Like docker build
+   */
   public static Dockerfile parse(String content) {
-    return new Dockerfile(content);
+    return new Dockerfile(content, false);
   }
 
+  /**
+   * Like docker build
+   */
   public static Dockerfile parse(File file) {
-    return new Dockerfile(file);
+    return new Dockerfile(file, false);
+  }
+
+  public static Dockerfile parseStrict(String content) {
+    return new Dockerfile(content, true);
+  }
+
+  public static Dockerfile parseStrict(File file) {
+    return new Dockerfile(file, true);
   }
 
   public String getFrom() {
-    return XStream.from(lines)
+    return XStream.from(allLines)
         .filter(l -> l.startsWith("FROM"))
-        .map(l -> l.replaceFirst("FROM ", ""))
+        .map(l -> l.replaceFirst(FROM + " ", ""))
         .last();
   }
 }

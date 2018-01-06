@@ -68,4 +68,8 @@ class XStream<T> {
   public static <T> XStream<T> empty() {
     return new XStream<>(Stream.empty());
   }
+
+  public T head() {
+    return Iterables.getFirst(toList(), null); // TODO check
+  }
 }
