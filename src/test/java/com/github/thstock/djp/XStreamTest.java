@@ -53,6 +53,6 @@ public class XStreamTest {
 
   @Test
   public void test_head() {
-    assertEquals("1", XStream.from("2", "1").head());
+    assertEquals("2", XStream.from("2", "1").head());
   }
 }
