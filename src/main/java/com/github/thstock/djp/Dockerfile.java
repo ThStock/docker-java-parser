@@ -66,4 +66,11 @@ public class Dockerfile {
   public static Dockerfile parse(File file) {
     return new Dockerfile(file);
   }
+
+  public String getFrom() {
+    return XStream.from(lines)
+        .filter(l -> l.startsWith("FROM"))
+        .map(l -> l.replaceFirst("FROM ", ""))
+        .last();
+  }
 }

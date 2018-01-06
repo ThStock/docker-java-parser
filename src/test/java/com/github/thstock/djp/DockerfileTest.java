@@ -23,6 +23,25 @@ public class DockerfileTest {
   }
 
   @Test
+  public void testMinimal() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM debian:stretch-slim");
+
+    // THEN
+    assertEquals(1, testee.lines.size());
+    assertEquals("debian:stretch-slim", testee.getFrom());
+  }
+
+  @Test
+  public void testMinimal_multistaged() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM debian:stretch-slim\nFROM alpine:3.7");
+
+    // THEN
+    assertEquals("alpine:3.7", testee.getFrom());
+  }
+
+  @Test
   public void test_empty() {
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
         .isThrownBy(() -> Dockerfile.parse(""))
