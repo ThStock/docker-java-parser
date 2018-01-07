@@ -11,7 +11,10 @@ import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.thstock.djp.util.XStream;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 import com.google.common.io.Resources;
@@ -26,6 +29,7 @@ public class Dockerfile {
   private final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, LABEL, ENV, RUN);
   final ImmutableList<String> allLines;
   final ImmutableList<String> lines;
+  private ImmutableList<DockerfileLine> tokenLines;
 
   Dockerfile(File file, boolean strict) {
     this(lines(file), strict);
@@ -39,18 +43,37 @@ public class Dockerfile {
     this.allLines = allLines;
     this.lines = XStream.from(allLines).filterNot(in -> in.trim().isEmpty()).toList();
 
-    ImmutableList<String> potentialTokens = XStream.from(lines)
-        .map(in -> in.replaceFirst("(^[^ \t]+).*", "$1"))
+    if (allLines.isEmpty() || lines.isEmpty()) {
+      throw new IllegalStateException("Dockerfile cannot be empty");
+    }
+
+    tokenLines = XStream.from(lines)
+        .map(DockerfileLine::from)
         .toList();
-    ImmutableList<String> invalids = XStream.from(potentialTokens)
+    ImmutableList<String> invalids = XStream.from(tokenLines)
+        .map(DockerfileLine::getToken)
         .filterNot(tokens::contains)
         .toList();
     if (!invalids.isEmpty()) {
       throw new IllegalStateException("invalid token(s): " + invalids);
     }
-    if (strict && !XStream.from(potentialTokens).head().equals(FROM)) {
+    if (strict && !XStream.from(tokenLines).head().equals(FROM)) {
       throw new IllegalStateException("Dockerfile must start with FROM");
     }
+  }
+
+  public String getFrom() {
+    return XStream.from(tokenLines)
+        .filter(l -> l.isToken(FROM))
+        .map(DockerfileLine::getValue)
+        .last();
+  }
+
+  public ImmutableMap<String, String> getLabels() {
+    return XStream.from(tokenLines)
+        .filter(l -> l.isToken(LABEL))
+        .map(DockerfileLine::getValue)
+        .toMap(Splitter.on('='));
   }
 
   private static ImmutableList<String> lines(String content) {
@@ -63,11 +86,7 @@ public class Dockerfile {
 
   private static ImmutableList<String> toLines(CharSource charSource) {
     try {
-      ImmutableList<String> lines = charSource.readLines();
-      if (lines.isEmpty() || XStream.from(lines.stream()).filterNot(l -> l.trim().isEmpty()).isEmpty()) {
-        throw new IllegalStateException("Dockerfile cannot be empty");
-      }
-      return lines;
+      return charSource.readLines();
     } catch (FileNotFoundException e) {
       throw new UncheckedIOException(e.getMessage(), e);
     } catch (IOException e) {
@@ -106,10 +125,4 @@ public class Dockerfile {
     return new Dockerfile(file, true);
   }
 
-  public String getFrom() {
-    return XStream.from(allLines)
-        .filter(l -> l.startsWith("FROM"))
-        .map(l -> l.replaceFirst(FROM + " ", ""))
-        .last();
-  }
 }

@@ -10,6 +10,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 public class DockerfileTest {
 
@@ -32,6 +33,34 @@ public class DockerfileTest {
   }
 
   @Test
+  public void test_labels() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b"), testee.getLabels());
+  }
+
+  @Test
+  public void test_labels_multi() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\nLABEL b=c");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
+  }
+
+  @Test
+  @Ignore
+  public void test_labels_multiline() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\\\nb=c");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
+  }
+
+  @Test
   public void testMinimal() {
     // GIVEN / WHEN
     Dockerfile testee = Dockerfile.parse("FROM debian:stretch-slim");
@@ -39,6 +68,7 @@ public class DockerfileTest {
     // THEN
     assertEquals(1, testee.allLines.size());
     assertEquals("debian:stretch-slim", testee.getFrom());
+    assertEquals(ImmutableMap.of(), testee.getLabels());
   }
 
   @Test

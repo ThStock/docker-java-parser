@@ -1,13 +1,16 @@
-package com.github.thstock.djp;
+package com.github.thstock.djp.util;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 public class XStreamTest {
 
@@ -54,5 +57,20 @@ public class XStreamTest {
   @Test
   public void test_head() {
     assertEquals("2", XStream.from("2", "1").head());
+  }
+
+  @Test
+  public void test_toMapFn() {
+    Function<String, Tuple<String, Integer>> fn = in -> {
+      String[] split = in.split("=");
+      return Tuple.of(split[0], Integer.valueOf(split[1]));
+    };
+    assertEquals(ImmutableMap.of("2", 1), XStream.from("2=1").toMap(fn));
+  }
+
+  @Test
+  public void test_toMapSplitter() {
+    Splitter splitter = Splitter.on("->");
+    assertEquals(ImmutableMap.of("a", "a"), XStream.from("a->a").toMap(splitter));
   }
 }

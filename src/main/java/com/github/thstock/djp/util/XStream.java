@@ -1,15 +1,18 @@
-package com.github.thstock.djp;
+package com.github.thstock.djp.util;
 
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 
-class XStream<T> {
+public class XStream<T> {
 
   private final Stream<T> inner;
 
@@ -45,7 +48,7 @@ class XStream<T> {
     return new XStream<>(Stream.of(elements));
   }
 
-  static <T> XStream<T> from(List<T> elements) {
+  public static <T> XStream<T> from(List<T> elements) {
     return new XStream<>(elements.stream());
   }
 
@@ -71,5 +74,20 @@ class XStream<T> {
 
   public T head() {
     return Iterables.getFirst(toList(), null); // TODO check
+  }
+
+  public <K, V> ImmutableMap<K, V> toMap(Function<T, Tuple<K, V>> fn) {
+    Map<K, V> collect = stream().collect(Collectors.toMap(k -> fn.apply(k).getKey(), v -> fn.apply(v).getValue()));
+    return ImmutableMap.copyOf(collect);
+  }
+
+  public ImmutableMap<String, String> toMap(Splitter splitter) {
+    return map(Object::toString).toMap(in -> {
+      List<String> strings = splitter.splitToList(in);
+      if (strings.size() != 2) {
+        throw new IllegalStateException("invalid split");
+      }
+      return Tuple.of(strings.get(0), strings.get(1));
+    });
   }
 }
