@@ -7,12 +7,16 @@ import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.NoSuchElementException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.thstock.djp.util.Tuple;
 import com.github.thstock.djp.util.XStream;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.CharSource;
@@ -30,6 +34,8 @@ public class Dockerfile {
   final ImmutableList<String> allLines;
   final ImmutableList<String> lines;
   private ImmutableList<DockerfileLine> tokenLines;
+  private String from;
+  private ImmutableMap<String, String> labels;
 
   Dockerfile(File file, boolean strict) {
     this(lines(file), strict);
@@ -47,7 +53,8 @@ public class Dockerfile {
       throw new IllegalStateException("Dockerfile cannot be empty");
     }
 
-    tokenLines = XStream.from(lines)
+    ImmutableList<String> elements = joindLines(lines, LC);
+    tokenLines = XStream.from(elements)
         .map(DockerfileLine::from)
         .toList();
     ImmutableList<String> invalids = XStream.from(tokenLines)
@@ -57,23 +64,69 @@ public class Dockerfile {
     if (!invalids.isEmpty()) {
       throw new IllegalStateException("invalid token(s): " + invalids);
     }
-    if (strict && !XStream.from(tokenLines).head().equals(FROM)) {
-      throw new IllegalStateException("Dockerfile must start with FROM");
+
+    try {
+      from = XStream.from(tokenLines)
+          .filter(l -> l.isToken(FROM))
+          .map(DockerfileLine::getValue)
+          .last();
+    } catch (NoSuchElementException e) {
+      if (strict) {
+        throw new IllegalStateException("Dockerfile must start with FROM");
+      } else {
+        from = "";
+      }
     }
+
+    labels = XStream.from(tokenLines)
+        .filter(l -> l.isToken(LABEL))
+        .map(DockerfileLine::getValue)
+        .flatMap(in -> XStream.from(Arrays.asList(in.split("\n"))).map(String::trim))
+        .toMap(Dockerfile::getObject);
+  }
+
+  static Tuple<String, String> getObject(String line) {
+    Pattern compile = Pattern.compile("^[^=]+=");
+    Matcher matcher = compile.matcher(line);
+    String a = "";
+    if (matcher.find()) {
+      a = matcher.group();
+    }
+    if (a.endsWith(" =")) {
+      // TODO strage
+      String substring = line.substring(a.length());
+      return Tuple.of(a.substring(0, a.length() - 1).trim(), "=" + substring);
+    } else {
+      String substring = line.substring(a.length());
+      return Tuple.of(a.substring(0, a.length() - 1), substring);
+    }
+
+  }
+
+  static ImmutableList<String> joindLines(ImmutableList<String> lines, String lc) {
+    ImmutableList.Builder<String> builder = ImmutableList.builder();
+    String buff = "";
+    for (int i = 0; i < lines.size(); i++) {
+      String l = lines.get(i);
+      String trim = l.trim();
+      if (!trim.endsWith(lc)) {
+        buff += l;
+        builder.add(buff);
+        buff = "";
+      } else {
+        String substring = trim.substring(0, trim.length() - 1);
+        buff += substring + "\n";
+      }
+    }
+    return builder.build();
   }
 
   public String getFrom() {
-    return XStream.from(tokenLines)
-        .filter(l -> l.isToken(FROM))
-        .map(DockerfileLine::getValue)
-        .last();
+    return from;
   }
 
   public ImmutableMap<String, String> getLabels() {
-    return XStream.from(tokenLines)
-        .filter(l -> l.isToken(LABEL))
-        .map(DockerfileLine::getValue)
-        .toMap(Splitter.on('='));
+    return labels;
   }
 
   private static ImmutableList<String> lines(String content) {

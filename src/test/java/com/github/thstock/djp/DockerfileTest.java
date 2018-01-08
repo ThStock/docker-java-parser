@@ -42,6 +42,39 @@ public class DockerfileTest {
   }
 
   @Test
+  public void test_labels_strange() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a = b");
+
+    // THEN
+    Assertions.assertThat(testee.getLabels())
+        .isEqualTo(ImmutableMap.of("a", "= b"));
+  }
+
+  @Test
+  public void test_labels_strange2() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a==b");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "=b"), testee.getLabels());
+  }
+
+  @Test
+  public void test_labels_invalid() {
+    // GIVEN / WHEN
+    Dockerfile.parse("FROM a\nLABEL a= = b");
+    // check exception - Error response from daemon: Syntax error - can't find = in "b". Must be of the form: name=value
+  }
+
+  @Test
+  public void test_labels_invalid_two() {
+    // GIVEN / WHEN
+    Dockerfile.parse("FROM a\nLABEL a=b b c=d");
+    // Error response from daemon: Syntax error - can't find = in "b". Must be of the form: name=value
+  }
+
+  @Test
   public void test_labels_multi() {
     // GIVEN / WHEN
     Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\nLABEL b=c");
@@ -52,9 +85,38 @@ public class DockerfileTest {
 
   @Test
   @Ignore
+  public void test_labels_multi_two() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL ”a”=”b” ”b”=”c”");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
+  }
+
+  @Test
+  @Ignore
+  public void test_labels_multi_two_space() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL ”a”=”b b” ”b”=”c”");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b b", "b", "c"), testee.getLabels());
+  }
+
+  @Test
+  @Ignore
+  public void test_labels_multi_two_var() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b  b=c");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
+  }
+
+  @Test
   public void test_labels_multiline() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\\\nb=c");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\\\n   b=c");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
@@ -116,7 +178,7 @@ public class DockerfileTest {
   public void test_start_with_no_token() {
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
         .isThrownBy(() -> Dockerfile.parse("a=b"))
-        .withMessage("invalid token(s): [a=b]")
+        .withMessage("Invalid Dockerfileline: 'a=b'")
     ;
   }
 
@@ -156,5 +218,40 @@ public class DockerfileTest {
         .isThrownBy(() -> Dockerfile.parse(content))
         .withMessage("n.a (No such file or directory)");
 
+  }
+
+  @Test
+  public void testJoined_nothing() {
+    ImmutableList<String> lines = Dockerfile.joindLines(ImmutableList.of("a", "b"), ",");
+
+    Assertions.assertThat(lines).isEqualTo(ImmutableList.of("a", "b"));
+  }
+
+  @Test
+  public void testJoined() {
+    ImmutableList<String> lines = Dockerfile.joindLines(ImmutableList.of("a,", "b"), ",");
+
+    Assertions.assertThat(lines).isEqualTo(ImmutableList.of("a\nb"));
+  }
+
+  @Test
+  public void testJoinedNewlines() {
+    ImmutableList<String> lines = Dockerfile.joindLines(ImmutableList.of("a\\\n", "b"), "\\");
+
+    Assertions.assertThat(lines).isEqualTo(ImmutableList.of("a\nb"));
+  }
+
+  @Test
+  public void testJoinedNewlinesWin() {
+    ImmutableList<String> lines = Dockerfile.joindLines(ImmutableList.of("a\\\r\n", "b"), "\\");
+
+    Assertions.assertThat(lines).isEqualTo(ImmutableList.of("a\nb"));
+  }
+
+  @Test
+  public void testJoined_var() {
+    ImmutableList<String> lines = Dockerfile.joindLines(ImmutableList.of("a,a,", "b"), ",");
+
+    Assertions.assertThat(lines).isEqualTo(ImmutableList.of("a,a\nb"));
   }
 }

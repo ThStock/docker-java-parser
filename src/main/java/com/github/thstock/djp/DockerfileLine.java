@@ -1,10 +1,24 @@
 package com.github.thstock.djp;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import com.github.thstock.djp.util.HashEquals;
 
 class DockerfileLine extends HashEquals {
   final String token;
   final String value;
+  private static Pattern p = Pattern.compile("(^[^ \t]+[ \t]+)(.+)");
+
+  public static DockerfileLine from(String line) {
+    Matcher matcher = p.matcher(line);
+    if (!matcher.find()) {
+      throw new IllegalStateException("Invalid Dockerfileline: '" + line + "'");
+    }
+    String token = matcher.group(1);
+    String value = line.substring(token.length());
+    return new DockerfileLine(token.trim(), value);
+  }
 
   DockerfileLine(String token, String value) {
     this.token = token;
@@ -17,13 +31,6 @@ class DockerfileLine extends HashEquals {
 
   String getValue() {
     return value;
-  }
-
-  public static DockerfileLine from(String line) {
-    String pattern = "(^[^ \t]+)[ \t]+(.*)";
-    String token = line.replaceFirst(pattern, "$1");
-    String value = line.replaceFirst(pattern, "$2");
-    return new DockerfileLine(token, value);
   }
 
   public boolean isToken(String token) {

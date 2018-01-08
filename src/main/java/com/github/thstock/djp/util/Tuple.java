@@ -1,6 +1,6 @@
 package com.github.thstock.djp.util;
 
-class Tuple<T1, T2> extends HashEquals {
+public class Tuple<T1, T2> extends HashEquals {
 
   private final T1 key;
   private final T2 value;

@@ -32,6 +32,10 @@ public class XStream<T> {
     return stream(stream().map(f));
   }
 
+  public <R> XStream<R> flatMap(Function<? super T, ? extends XStream<R>> f) {
+    return stream(stream().flatMap(in -> f.apply(in).stream()));
+  }
+
   public T last(Predicate<? super T> predicate) {
     return filter(predicate).last();
   }
@@ -40,13 +44,14 @@ public class XStream<T> {
     return Iterables.getLast(toList());
   }
 
-  private Stream<T> stream() {
+  Stream<T> stream() {
     return inner;
   }
 
   static <T> XStream<T> from(T... elements) {
     return new XStream<>(Stream.of(elements));
   }
+
 
   public static <T> XStream<T> from(List<T> elements) {
     return new XStream<>(elements.stream());
@@ -85,7 +90,7 @@ public class XStream<T> {
     return map(Object::toString).toMap(in -> {
       List<String> strings = splitter.splitToList(in);
       if (strings.size() != 2) {
-        throw new IllegalStateException("invalid split");
+        throw new IllegalStateException("invalid split: " + strings);
       }
       return Tuple.of(strings.get(0), strings.get(1));
     });
