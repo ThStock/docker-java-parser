@@ -52,7 +52,6 @@ public class XStream<T> {
     return new XStream<>(Stream.of(elements));
   }
 
-
   public static <T> XStream<T> from(List<T> elements) {
     return new XStream<>(elements.stream());
   }
@@ -75,6 +74,18 @@ public class XStream<T> {
 
   public static <T> XStream<T> empty() {
     return new XStream<>(Stream.empty());
+  }
+
+  public XStream<T> drop(int limit) {
+    if (limit < 0) {
+      return from(toList());
+    } else {
+      return from(toList().stream().skip(limit));
+    }
+  }
+
+  public XStream<T> take(int size) {
+    return from(toList().stream().limit(size));
   }
 
   public T head() {

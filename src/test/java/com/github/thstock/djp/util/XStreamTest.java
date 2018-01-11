@@ -60,6 +60,16 @@ public class XStreamTest {
   }
 
   @Test
+  public void test_drop() {
+    assertEquals(XStream.from("1").toList(), XStream.from("2", "1").drop(1).toList());
+  }
+
+  @Test
+  public void test_take() {
+    assertEquals(XStream.from("2").toList(), XStream.from("2", "1").take(1).toList());
+  }
+
+  @Test
   public void test_toMapFn() {
     Function<String, Tuple<String, Integer>> fn = in -> {
       String[] split = in.split("=");

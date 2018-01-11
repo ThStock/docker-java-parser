@@ -7,10 +7,7 @@ import java.io.UncheckedIOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.NoSuchElementException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,27 +77,23 @@ public class Dockerfile {
 
     labels = XStream.from(tokenLines)
         .filter(l -> l.isToken(LABEL))
-        .map(DockerfileLine::getValue)
-        .flatMap(in -> XStream.from(Arrays.asList(in.split("\n"))).map(String::trim))
+        .map(DockerfileLine::valueTokens)
+        .flatMap(in -> {
+          ImmutableList.Builder<ImmutableList<String>> builder = ImmutableList.builder();
+          ImmutableList<String> l = in;
+          while (l.size() > 2) {
+            ImmutableList<String> strings = XStream.from(l).take(3).toList();
+            l = XStream.from(l).drop(3).toList();
+            builder.add(strings);
+          }
+
+          return XStream.from(builder.build());
+        })
         .toMap(Dockerfile::getObject);
   }
 
-  static Tuple<String, String> getObject(String line) {
-    Pattern compile = Pattern.compile("^[^=]+=");
-    Matcher matcher = compile.matcher(line);
-    String a = "";
-    if (matcher.find()) {
-      a = matcher.group();
-    }
-    if (a.endsWith(" =")) {
-      // TODO strage
-      String substring = line.substring(a.length());
-      return Tuple.of(a.substring(0, a.length() - 1).trim(), "=" + substring);
-    } else {
-      String substring = line.substring(a.length());
-      return Tuple.of(a.substring(0, a.length() - 1), substring);
-    }
-
+  static Tuple<String, String> getObject(ImmutableList<String> line) {
+    return Tuple.of(line.get(0), line.get(2));
   }
 
   static ImmutableList<String> joindLines(ImmutableList<String> lines, String lc) {
