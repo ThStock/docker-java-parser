@@ -3,7 +3,6 @@ package com.github.thstock.djp;
 import static org.junit.Assert.assertEquals;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -62,66 +61,77 @@ public class DockerfileLineTest {
   }
 
   @Test
-  @Ignore // TODO
   public void testLine_value_strange() {
     // GIVEN / WHEN
     DockerfileLine testee = DockerfileLine.from("LABEL a = b");
 
     // THEN
-    assertEquals(ImmutableList.of("a", "=", "= b"), testee.valueTokens());
+    assertEquals(ImmutableList.of("a", " ", "=", " ", "b"), testee.valueTokens());
 
   }
 
   @Test
-  @Ignore // TODO
   public void testLine_value_strange2() {
     // GIVEN / WHEN
     DockerfileLine testee = DockerfileLine.from("LABEL a==b");
 
     // THEN
-    assertEquals(ImmutableList.of("a", "=", "=b"), testee.valueTokens());
+    assertEquals(ImmutableList.of("a", "=", "=", "b"), testee.valueTokens());
+  }
+
+  @Test
+  public void testLine_value_invalid() {
+    // GIVEN / WHEN
+    assertEquals(ImmutableList.of("a", "=", " ", "=", " ", "b"), DockerfileLine.from("LABEL a= = b").valueTokens());
+  }
+
+  @Test
+  public void testLine_value_invalid_two() {
+    // GIVEN / WHEN
+    assertEquals(ImmutableList.of("a", "=", "b", " ", "z", " ", "c", "=", "d"),
+        DockerfileLine.from("LABEL a=b z c=d").valueTokens());
   }
 
   @Test
   public void testLine_value_tokens_multi() {
     DockerfileLine testee = DockerfileLine.from("LABEL a=a    b=b");
 
-    assertEquals(ImmutableList.of("a", "=", "a", "b", "=", "b"), testee.valueTokens());
+    assertEquals(ImmutableList.of("a", "=", "a", " ", "b", "=", "b"), testee.valueTokens());
   }
 
   @Test
   public void testLine_value_tokens_multiline() {
     DockerfileLine testee = DockerfileLine.from("LABEL a=a \nb=b");
 
-    assertEquals(ImmutableList.of("a", "=", "a", "b", "=", "b"), testee.valueTokens());
+    assertEquals(ImmutableList.of("a", "=", "a", " ","b", "=", "b"), testee.valueTokens());
   }
 
   @Test
   public void testLine_value_tokens_multiline_indent() {
     DockerfileLine testee = DockerfileLine.from("LABEL a=a \n    b=b");
 
-    assertEquals(ImmutableList.of("a", "=", "a", "b", "=", "b"), testee.valueTokens());
+    assertEquals(ImmutableList.of("a", "=", "a", " ", "b", "=", "b"), testee.valueTokens());
   }
 
   @Test
   public void testLine_value_tokens_multiline_indent_quote() {
     DockerfileLine testee = DockerfileLine.from("LABEL \" a \"=a \n   \" b\"=b");
 
-    assertEquals(ImmutableList.of(" a ", "=", "a", " b", "=", "b"), testee.valueTokens());
+    assertEquals(ImmutableList.of(" a ", "=", "a", " "," b", "=", "b"), testee.valueTokens());
   }
 
   @Test
   public void testLine_value_tokens_multiline_indent_quote_all() {
     DockerfileLine testee = DockerfileLine.from("LABEL \" a \"=\" a \"   \n   \" b \"=\" b \"");
 
-    assertEquals(ImmutableList.of(" a ", "=", " a ", " b ", "=", " b "), testee.valueTokens());
+    assertEquals(ImmutableList.of(" a ", "=", " a ", " ", " b ", "=", " b "), testee.valueTokens());
   }
 
   @Test
   public void testLine_value_tokens_multiline_indent_quote_other() {
     DockerfileLine testee = DockerfileLine.from("LABEL \"a\"=\"b b\" \"b\"=\"c\"");
 
-    assertEquals(ImmutableList.of("a", "=", "b b", "b", "=", "c"), testee.valueTokens());
+    assertEquals(ImmutableList.of("a", "=", "b b", " ", "b", "=", "c"), testee.valueTokens());
   }
 
   @Test

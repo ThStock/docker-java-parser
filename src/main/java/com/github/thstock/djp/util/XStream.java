@@ -106,4 +106,12 @@ public class XStream<T> {
       return Tuple.of(strings.get(0), strings.get(1));
     });
   }
+
+  public String mkString() {
+    return map(Object::toString).stream().collect(Collectors.joining());
+  }
+
+  public String mkString(CharSequence seperator) {
+    return map(Object::toString).stream().collect(Collectors.joining(seperator));
+  }
 }

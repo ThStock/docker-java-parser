@@ -6,7 +6,6 @@ import java.io.File;
 import java.io.UncheckedIOException;
 
 import org.assertj.core.api.Assertions;
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -42,7 +41,6 @@ public class DockerfileTest {
   }
 
   @Test
-  @Ignore // TODO
   public void test_labels_strange() {
     // GIVEN / WHEN
     Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a = b");
@@ -53,7 +51,6 @@ public class DockerfileTest {
   }
 
   @Test
-  @Ignore // TODO
   public void test_labels_strange2() {
     // GIVEN / WHEN
     Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a==b");
@@ -63,22 +60,74 @@ public class DockerfileTest {
   }
 
   @Test
-  @Ignore // TODO
+  public void test_labels_strange3() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a==");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "="), testee.getLabels());
+  }
+
+  @Test
+  public void test_labels_strange4() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=\"=\"");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "="), testee.getLabels());
+  }
+
+  @Test
+  public void test_labels_strange_strict() {
+    // GIVEN / WHEN
+    Assertions.assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(() -> Dockerfile.parseStrict("FROM a\nLABEL a = b"))
+        .withMessage("Syntax error - can't find = in \"=\". Must be of the form: name=value");
+
+  }
+
+  @Test
+  public void test_labels_strange2_strict() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parseStrict("FROM a\nLABEL a==b");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "="), testee.getLabels()); // TODO Exception?
+  }
+
+  @Test
+  public void test_labels_strange3_strict() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parseStrict("FROM a\nLABEL a==");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "="), testee.getLabels()); // TODO Exception?
+  }
+
+  @Test
+  public void test_labels_strange4_strict() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parseStrict("FROM a\nLABEL a=\"=\"");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "="), testee.getLabels()); // TODO Exception?
+  }
+
+  @Test
   public void test_labels_invalid() {
     // GIVEN / WHEN
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parse("FROM a\nLABEL a= = b"))
-        .withMessage("Error response from daemon: Syntax error - can't find = in \"b\". Must be of the form: name=value")
+        .isThrownBy(() -> Dockerfile.parse("FROM a\nLABEL a= = z"))
+        .withMessage("Syntax error - can't find = in \"z\". Must be of the form: name=value")
     ;
   }
 
   @Test
-  @Ignore // TODO
   public void test_labels_invalid_two() {
     // GIVEN / WHEN
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
         .isThrownBy(() -> Dockerfile.parse("FROM a\nLABEL a=b b c=d"))
-        .withMessage("Error response from daemon: Syntax error - can't find = in \"b\". Must be of the form: name=value")
+        .withMessage("Syntax error - can't find = in \"c\". Must be of the form: name=value")
     ;
   }
 
@@ -188,7 +237,6 @@ public class DockerfileTest {
   }
 
   @Test
-  @Ignore
   public void test_file() {
     // GIVEN
     File content = Dockerfile.resourceFile("samples/Nginx");
@@ -198,10 +246,11 @@ public class DockerfileTest {
 
     // THEN
     assertEquals(99, testee.allLines.size());
+    assertEquals(75, testee.lines.size());
+    assertEquals(ImmutableMap.of("maintainer", "NGINX Docker Maintainers <docker-maint@nginx.com>"), testee.getLabels());
   }
 
   @Test
-  @Ignore
   public void test_file_strict() {
     // GIVEN
     File content = Dockerfile.resourceFile("samples/Nginx");
@@ -211,6 +260,9 @@ public class DockerfileTest {
 
     // THEN
     assertEquals(99, testee.allLines.size());
+    assertEquals(75, testee.lines.size());
+    assertEquals(ImmutableMap.of("maintainer", "NGINX Docker Maintainers <docker-maint@nginx.com>"), testee.getLabels());
+
   }
 
   @Test

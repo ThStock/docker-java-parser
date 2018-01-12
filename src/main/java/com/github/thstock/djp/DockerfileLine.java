@@ -6,6 +6,7 @@ import java.util.regex.Pattern;
 
 import com.github.thstock.djp.util.HashEquals;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 class DockerfileLine extends HashEquals {
@@ -64,19 +65,13 @@ class DockerfileLine extends HashEquals {
         } else if (c == '\n' || c == ' ' || c == '\t') {
           newline = true;
           applyNonEmpty(objects, token.trim());
+          if (!Iterables.getLast(objects).equals(" ")) {
+                objects.add(" ");
+          }
           token = "";
         } else {
           if (c != '"' && c != '\'') {
-            if (!newline) {
-              if (c != ' ' && c != '\t') {
-                token += c;
-              }
-            } else {
-              if (c != ' ' && c != '\t') {
-                token += c;
-              }
-            }
-
+            token += c;
           }
         }
       } else {

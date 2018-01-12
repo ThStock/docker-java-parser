@@ -70,6 +70,13 @@ public class XStreamTest {
   }
 
   @Test
+  public void test_mkString() {
+    assertEquals("21", XStream.from("2", "1").mkString());
+    assertEquals("a-b", XStream.from("a", "b").mkString("-"));
+    assertEquals("1->2", XStream.from(1, 2).mkString("->"));
+  }
+
+  @Test
   public void test_toMapFn() {
     Function<String, Tuple<String, Integer>> fn = in -> {
       String[] split = in.split("=");

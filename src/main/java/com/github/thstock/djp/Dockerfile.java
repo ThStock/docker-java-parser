@@ -26,8 +26,11 @@ public class Dockerfile {
   private static final String LABEL = "LABEL";
   private static final String ENV = "ENV";
   private static final String RUN = "RUN";
+  private static final String EXPOSE = "EXPOSE";
+  private static final String STOPSIGNAL = "STOPSIGNAL";
+  private static final String CMD = "CMD";
   private final String LC = "\\";
-  private final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, LABEL, ENV, RUN);
+  private final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, LABEL, ENV, RUN, EXPOSE, STOPSIGNAL, CMD);
   final ImmutableList<String> allLines;
   final ImmutableList<String> lines;
   private ImmutableList<DockerfileLine> tokenLines;
@@ -44,7 +47,10 @@ public class Dockerfile {
 
   Dockerfile(ImmutableList<String> allLines, boolean strict) {
     this.allLines = allLines;
-    this.lines = XStream.from(allLines).filterNot(in -> in.trim().isEmpty()).toList();
+    this.lines = XStream.from(allLines)
+        .filterNot(in -> in.trim().isEmpty())
+        .filterNot(in -> in.trim().startsWith("#"))
+        .toList();
 
     if (allLines.isEmpty() || lines.isEmpty()) {
       throw new IllegalStateException("Dockerfile cannot be empty");
@@ -82,9 +88,37 @@ public class Dockerfile {
           ImmutableList.Builder<ImmutableList<String>> builder = ImmutableList.builder();
           ImmutableList<String> l = in;
           while (l.size() > 2) {
-            ImmutableList<String> strings = XStream.from(l).take(3).toList();
-            l = XStream.from(l).drop(3).toList();
-            builder.add(strings);
+            int drop = 3;
+            ImmutableList<String> strings = XStream.from(l).take(drop).toList();
+
+            String key = strings.get(0);
+            String equal = strings.get(1);
+            String value = strings.get(2);
+            String last = XStream.from(l).take(4).last();
+            if (last.equals(" ")) {
+              drop = 4;
+            }
+            if (!strict && equal.equals(" ") && value.equals("=")) {
+              ImmutableList<String> strings2 = XStream.from(l).take(5).toList();
+              equal = value;
+              value = "= " + strings2.get(4);
+              drop = 5;
+            } else if (!strict && equal.equals("=") && value.equals("=")) {
+              ImmutableList<String> strings2 = XStream.from(l).take(4).toList();
+              equal = value;
+              value = strings2.get(2);
+              if (strings2.size() > 3) {
+                value += strings2.get(3);
+              }
+              drop = 4;
+            }
+            if (!equal.equals("=")) {
+              throw new IllegalStateException(
+                  "Syntax error - can't find = in \"" + value + "\". Must be of the form: name=value");
+            }
+
+            builder.add(ImmutableList.of(key, equal, value));
+            l = XStream.from(l).drop(drop).toList();
           }
 
           return XStream.from(builder.build());
@@ -93,7 +127,9 @@ public class Dockerfile {
   }
 
   static Tuple<String, String> getObject(ImmutableList<String> line) {
-    return Tuple.of(line.get(0), line.get(2));
+    String key = line.get(0);
+    String value = line.get(2);
+    return Tuple.of(key, value);
   }
 
   static ImmutableList<String> joindLines(ImmutableList<String> lines, String lc) {
