@@ -1,2 +1,6 @@
 FROM debian:stretch-slim
-LABEL a==
+CMD run.sh
+CMD other.sh
+EXPOSE 10
+EXPOSE 90
+EXPOSE 10

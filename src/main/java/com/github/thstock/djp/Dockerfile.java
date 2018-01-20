@@ -154,6 +154,74 @@ public class Dockerfile {
     return from;
   }
 
+  public String getCmdShell() {
+    // strict: more then one cmd exception; else use latest cmd
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  public ImmutableList<String> getCmd() {
+    // strict: more then one cmd exception; else use latest cmd
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  public ImmutableMap<Integer, String> getExpose() {
+    // e.g. 80/tcp, 99/udp
+    // strict: redundant expose lines exceptions; else use all distinct
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  ImmutableMap<String, String> getEnv() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getAdd() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getCopy() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getEntrypoint() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getVolume() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getUser() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getWorkdir() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getArg() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getOnbuild() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getStopsignal() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getHealthcheck() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  void getShell() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
+  public ImmutableList<String> getRunLines() {
+    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  }
+
   public ImmutableMap<String, String> getLabels() {
     return labels;
   }
