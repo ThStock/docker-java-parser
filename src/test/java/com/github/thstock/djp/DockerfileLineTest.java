@@ -61,6 +61,13 @@ public class DockerfileLineTest {
   }
 
   @Test
+  public void testLine_value_tokens_escape_ws() {
+    DockerfileLine testee = DockerfileLine.from("ENV a=a\\ a");
+
+    assertEquals(ImmutableList.of("a", "=", "a a"), testee.valueTokens());
+  }
+
+  @Test
   public void testLine_value_strange() {
     // GIVEN / WHEN
     DockerfileLine testee = DockerfileLine.from("LABEL a = b");

@@ -36,6 +36,8 @@ public class Dockerfile {
   private ImmutableList<DockerfileLine> tokenLines;
   private String from;
   private ImmutableMap<String, String> labels;
+  private ImmutableMap<String, String> env;
+
 
   Dockerfile(File file, boolean strict) {
     this(lines(file), strict);
@@ -124,6 +126,37 @@ public class Dockerfile {
           return XStream.from(builder.build());
         })
         .toMap(Dockerfile::getObject);
+
+    env = XStream.from(tokenLines)
+        .filter(l -> l.isToken(ENV))
+        .map(DockerfileLine::valueTokens)
+        .flatMap(in -> {
+          ImmutableList.Builder<ImmutableList<String>> builder = ImmutableList.builder();
+          ImmutableList<String> l = in;
+          while (l.size() > 2) {
+            if (l.contains("=")) {
+              int drop = 3;
+              ImmutableList<String> strings = XStream.from(l).take(drop).toList();
+
+              String key = strings.get(0);
+              String equal = strings.get(1);
+              String value = strings.get(2);
+              String last = XStream.from(l).take(4).last();
+              if (last.equals(" ")) {
+                drop = 4;
+              }
+              builder.add(ImmutableList.of(key, equal, value));
+              l = XStream.from(l).drop(drop).toList();
+            } else {
+              builder.add(ImmutableList.of(in.get(0), "=", XStream.from(in).drop(2).mkString("")));
+              l = ImmutableList.of();
+            }
+
+          }
+
+          return XStream.from(builder.build());
+        })
+        .toMap(Dockerfile::getObject);
   }
 
   static Tuple<String, String> getObject(ImmutableList<String> line) {
@@ -171,7 +204,7 @@ public class Dockerfile {
   }
 
   ImmutableMap<String, String> getEnv() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    return env;
   }
 
   void getAdd() {

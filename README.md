@@ -8,6 +8,7 @@ A parser for Dockerfiles in Java.
 Dockerfile df = Dockerfile.parse(new File("Dockerfile"));
 df.getFrom(); // alpine:3.7
 df.getLabels(); // {maintainer=ThStock@example.org}
+df.getEnv(); // {VERSION=9}
 
 ```
 

@@ -62,15 +62,18 @@ class DockerfileLine extends HashEquals {
           applyNonEmpty(objects, token);
           objects.add("=");
           token = "";
-        } else if (c == '\n' || c == ' ' || c == '\t') {
+        } else if (c == '\n' || (c == ' ' && (token.length() == 0 || last(token) != '\\')) || c == '\t') {
           newline = true;
           applyNonEmpty(objects, token.trim());
           if (!Iterables.getLast(objects).equals(" ")) {
-                objects.add(" ");
+            objects.add(" ");
           }
           token = "";
         } else {
           if (c != '"' && c != '\'') {
+            if (token.length() > 0 && last(token) == '\\') {
+              token = dropLast(token);
+            }
             token += c;
           }
         }
@@ -90,6 +93,14 @@ class DockerfileLine extends HashEquals {
 
     }
     return ImmutableList.copyOf(objects);
+  }
+
+  private String dropLast(String string) {
+    return string.substring(0, string.length() - 1);
+  }
+
+  private char last(String string) {
+    return string.charAt(string.length() - 1);
   }
 
   private void applyNonEmpty(ArrayList<String> objects, String token) {

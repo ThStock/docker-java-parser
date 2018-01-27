@@ -237,6 +237,29 @@ public class DockerfileTest {
   }
 
   @Test
+  public void test_env_equal() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nENV myName=\"John Doe\" myDog=Rex\\ The\\ Dog \\\n"
+        + "    myCat=fluffy");
+
+    // THEN
+    assertEquals(ImmutableMap.of("myName", "John Doe", "myDog", "Rex The Dog", "myCat", "fluffy"),
+        testee.getEnv());
+  }
+
+  @Test
+  public void test_env() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nENV myName John Doe\n"
+        + "ENV myDog Rex The Dog\n"
+        + "ENV myCat fluffy");
+
+    // THEN
+    assertEquals(ImmutableMap.of("myName", "John Doe", "myDog", "Rex The Dog", "myCat", "fluffy"),
+        testee.getEnv());
+  }
+
+  @Test
   public void test_file() {
     // GIVEN
     File content = Dockerfile.resourceFile("samples/Nginx");
