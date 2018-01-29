@@ -23,21 +23,32 @@ import com.google.common.io.Resources;
 public class Dockerfile {
   private static final Logger LOGGER = LoggerFactory.getLogger(Dockerfile.class);
   private static final String FROM = "FROM";
-  private static final String LABEL = "LABEL";
-  private static final String ENV = "ENV";
   private static final String RUN = "RUN";
-  private static final String EXPOSE = "EXPOSE";
-  private static final String STOPSIGNAL = "STOPSIGNAL";
   private static final String CMD = "CMD";
+  private static final String LABEL = "LABEL";
+  private static final String MAINTAINER = "MAINTAINER";
+  private static final String EXPOSE = "EXPOSE";
+  private static final String ENV = "ENV";
+  private static final String ADD = "ADD";
+  private static final String COPY = "COPY";
+  private static final String ENTRYPOINT = "ENTRYPOINT";
+  private static final String VOLUME = "VOLUME";
+  private static final String USER = "USER";
+  private static final String WORKDIR = "WORKDIR";
+  private static final String ARG = "ARG";
+  private static final String ONBUILD = "ONBUILD";
+  private static final String STOPSIGNAL = "STOPSIGNAL";
+  private static final String HEALTHCHECK = "HEALTHCHECK";
+  private static final String SHELL = "SHELL";
   private final String LC = "\\";
-  private final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, LABEL, ENV, RUN, EXPOSE, STOPSIGNAL, CMD);
+  private final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, RUN, CMD, LABEL, MAINTAINER, EXPOSE, ENV,
+      ADD, COPY, ENTRYPOINT, VOLUME, USER, WORKDIR, ARG, ONBUILD, STOPSIGNAL, HEALTHCHECK, SHELL);
   final ImmutableList<String> allLines;
   final ImmutableList<String> lines;
   private ImmutableList<DockerfileLine> tokenLines;
   private String from;
   private ImmutableMap<String, String> labels;
   private ImmutableMap<String, String> env;
-
 
   Dockerfile(File file, boolean strict) {
     this(lines(file), strict);

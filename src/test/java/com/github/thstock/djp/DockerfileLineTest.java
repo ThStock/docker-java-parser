@@ -3,6 +3,7 @@ package com.github.thstock.djp;
 import static org.junit.Assert.assertEquals;
 
 import org.assertj.core.api.Assertions;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -132,6 +133,21 @@ public class DockerfileLineTest {
     DockerfileLine testee = DockerfileLine.from("LABEL \" a \"=\" a \"   \n   \" b \"=\" b \"");
 
     assertEquals(ImmutableList.of(" a ", "=", " a ", " ", " b ", "=", " b "), testee.valueTokens());
+  }
+
+  @Test
+  public void testLine_value_tokens_multiline_simple() {
+    DockerfileLine testee = DockerfileLine.from("LABEL a=\" a \n \" "); // TODO maybe invalid
+
+    assertEquals(ImmutableList.of("a", "=", " a \n ", " "), testee.valueTokens());
+  }
+
+  @Test
+  @Ignore
+  public void testLine_value_tokens_multiline_escape() {
+    DockerfileLine testee = DockerfileLine.from("LABEL a=\" a \\\n \" ");
+
+    assertEquals(ImmutableList.of("a", "=", " a \n ", " "), testee.valueTokens());
   }
 
   @Test
