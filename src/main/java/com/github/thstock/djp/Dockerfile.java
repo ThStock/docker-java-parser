@@ -214,7 +214,7 @@ public class Dockerfile {
     throw new UnsupportedOperationException("Will be implemented later"); // TODO
   }
 
-  ImmutableMap<String, String> getEnv() {
+  public ImmutableMap<String, String> getEnv() {
     return env;
   }
 
