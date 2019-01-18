@@ -260,6 +260,32 @@ public class DockerfileTest {
   }
 
   @Test
+  public void test_var() {
+    // GIVEN / WHEN
+    // TODO export env variable "some"
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL test=${some}\n");
+    // THEN
+    // TODO unclear what will happen
+  }
+
+  @Test
+  public void test_var_escaped() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL test=\\${some:invalid}\n");
+    // THEN
+    assertEquals(ImmutableMap.of("test", "${some:invalid}"), testee.getLabels());
+  }
+
+  @Test
+  public void test_invalid_var() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL test=${some:invalid}\n");
+    // THEN
+    // failed to process "${some:invalid}": unsupported modifier (i) in substitution
+    // TODO test for exception
+  }
+
+  @Test
   public void test_file() {
     // GIVEN
     File content = Dockerfile.resourceFile("samples/Nginx");
