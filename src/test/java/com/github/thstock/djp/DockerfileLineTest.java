@@ -184,4 +184,10 @@ public class DockerfileLineTest {
     // TODO error
     assertEquals(ImmutableList.of("a", "=", "a"), testee.valueTokens());
   }
+
+  @Test
+  public void testLine_copy() {
+    DockerfileLine testee = DockerfileLine.from("COPY /from /to");
+    assertEquals(ImmutableList.of("/from", " ", "/to"), testee.valueTokens());
+  }
 }

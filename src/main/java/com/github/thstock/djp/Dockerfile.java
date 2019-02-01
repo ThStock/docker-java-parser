@@ -49,6 +49,7 @@ public class Dockerfile {
   private String from;
   private ImmutableMap<String, String> labels;
   private ImmutableMap<String, String> env;
+  private ImmutableMap<String, String> copy;
 
   Dockerfile(File file, boolean strict) {
     this(lines(file), strict);
@@ -168,6 +169,21 @@ public class Dockerfile {
           return XStream.from(builder.build());
         })
         .toMap(Dockerfile::getObject);
+
+    copy = XStream.from(tokenLines)
+        .filter(l -> l.isToken(COPY))
+        .map(DockerfileLine::valueTokens)
+        .flatMap(in -> {
+          ImmutableList.Builder<ImmutableList<String>> builder = ImmutableList.builder();
+          if (in.size() == 3) {
+            builder.add(in);
+            return XStream.from(builder.build());
+          } else {
+            // TODO error handling
+            return XStream.from(builder.build());
+          }
+        })
+        .toMap(Dockerfile::getObject);
   }
 
   static Tuple<String, String> getObject(ImmutableList<String> line) {
@@ -222,8 +238,8 @@ public class Dockerfile {
     throw new UnsupportedOperationException("Will be implemented later"); // TODO
   }
 
-  void getCopy() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
+  ImmutableMap<String, String> getCopy() {
+    return copy;
   }
 
   void getEntrypoint() {

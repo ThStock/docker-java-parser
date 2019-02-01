@@ -286,6 +286,23 @@ public class DockerfileTest {
   }
 
   @Test
+  public void test_copy() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nCOPY a b\n");
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b"), testee.getCopy());
+  }
+
+  @Test
+  public void test_copy_two() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nCOPY a b\nCOPY ./from /to/other\n");
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b", "./from", "/to/other"), testee.getCopy());
+  }
+
+
+  @Test
   public void test_file() {
     // GIVEN
     File content = Dockerfile.resourceFile("samples/Nginx");
@@ -322,7 +339,7 @@ public class DockerfileTest {
     // WHEN / THEN
     Assertions.assertThatExceptionOfType(UncheckedIOException.class)
         .isThrownBy(() -> Dockerfile.parse(content))
-        .withMessage("n.a (No such file or directory)");
+        .withMessageStartingWith("n.a ("); // No such file or directory)
 
   }
 
