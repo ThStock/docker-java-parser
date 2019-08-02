@@ -1,338 +1,172 @@
 package com.github.thstock.djp;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.net.URISyntaxException;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.util.NoSuchElementException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.github.thstock.djp.util.Tuple;
-import com.github.thstock.djp.util.XStream;
+import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.CharSource;
-import com.google.common.io.Files;
 import com.google.common.io.Resources;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import scala.collection.immutable.List;
+import scala.util.parsing.combinator.Parsers;
+
+import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 public class Dockerfile {
-  private static final Logger LOGGER = LoggerFactory.getLogger(Dockerfile.class);
-  private static final String FROM = "FROM";
-  private static final String RUN = "RUN";
-  private static final String CMD = "CMD";
-  private static final String LABEL = "LABEL";
-  private static final String MAINTAINER = "MAINTAINER";
-  private static final String EXPOSE = "EXPOSE";
-  private static final String ENV = "ENV";
-  private static final String ADD = "ADD";
-  private static final String COPY = "COPY";
-  private static final String ENTRYPOINT = "ENTRYPOINT";
-  private static final String VOLUME = "VOLUME";
-  private static final String USER = "USER";
-  private static final String WORKDIR = "WORKDIR";
-  private static final String ARG = "ARG";
-  private static final String ONBUILD = "ONBUILD";
-  private static final String STOPSIGNAL = "STOPSIGNAL";
-  private static final String HEALTHCHECK = "HEALTHCHECK";
-  private static final String SHELL = "SHELL";
-  private final String LC = "\\";
-  private final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, RUN, CMD, LABEL, MAINTAINER, EXPOSE, ENV,
-      ADD, COPY, ENTRYPOINT, VOLUME, USER, WORKDIR, ARG, ONBUILD, STOPSIGNAL, HEALTHCHECK, SHELL);
-  final ImmutableList<String> allLines;
-  final ImmutableList<String> lines;
-  private ImmutableList<DockerfileLine> tokenLines;
-  private String from;
-  private ImmutableMap<String, String> labels;
-  private ImmutableMap<String, String> env;
-  private ImmutableMap<String, String> copy;
+    private static final Logger LOGGER = LoggerFactory.getLogger(Dockerfile.class);
+    static final String FROM = "FROM";
+    private static final String RUN = "RUN";
+    private static final String CMD = "CMD";
+    static final String LABEL = "LABEL";
+    private static final String MAINTAINER = "MAINTAINER";
+    private static final String EXPOSE = "EXPOSE";
+    static final String ENV = "ENV";
+    private static final String ADD = "ADD";
+    static final String COPY = "COPY";
+    private static final String ENTRYPOINT = "ENTRYPOINT";
+    private static final String VOLUME = "VOLUME";
+    private static final String USER = "USER";
+    private static final String WORKDIR = "WORKDIR";
+    private static final String ARG = "ARG";
+    private static final String ONBUILD = "ONBUILD";
+    private static final String STOPSIGNAL = "STOPSIGNAL";
+    private static final String HEALTHCHECK = "HEALTHCHECK";
+    private static final String SHELL = "SHELL";
+    static final String LC = "\\";
+    static final ImmutableList<String> tokens = ImmutableList.of("#", LC, FROM, RUN, CMD, LABEL, MAINTAINER, EXPOSE, ENV,
+            ADD, COPY, ENTRYPOINT, VOLUME, USER, WORKDIR, ARG, ONBUILD, STOPSIGNAL, HEALTHCHECK, SHELL);
+    final ImmutableList<String> allLines;
+    final ImmutableList<String> lines;
+    final String from;
+    final ImmutableMap<String, String> labels;
+    final ImmutableMap<String, String> env;
+    final ImmutableMap<String, String> copy;
 
-  Dockerfile(File file, boolean strict) {
-    this(lines(file), strict);
-  }
-
-  Dockerfile(String content, boolean strict) {
-    this(lines(content), strict);
-  }
-
-  Dockerfile(ImmutableList<String> allLines, boolean strict) {
-    this.allLines = allLines;
-    this.lines = XStream.from(allLines)
-        .filterNot(in -> in.trim().isEmpty())
-        .filterNot(in -> in.trim().startsWith("#"))
-        .toList();
-
-    if (allLines.isEmpty() || lines.isEmpty()) {
-      throw new IllegalStateException("Dockerfile cannot be empty");
+    Dockerfile(ImmutableList<String> allLines, ImmutableList<String> lines,
+               String from,
+               ImmutableMap<String, String> labels,
+               ImmutableMap<String, String> env,
+               ImmutableMap<String, String> copy) {
+        this.allLines = allLines;
+        this.lines = lines;
+        this.from = from;
+        this.labels = labels;
+        this.env = env;
+        this.copy = copy;
     }
 
-    ImmutableList<String> elements = joindLines(lines, LC);
-    tokenLines = XStream.from(elements)
-        .map(DockerfileLine::from)
-        .toList();
-    ImmutableList<String> invalids = XStream.from(tokenLines)
-        .map(DockerfileLine::getToken)
-        .filterNot(tokens::contains)
-        .toList();
-    if (!invalids.isEmpty()) {
-      throw new IllegalStateException("invalid token(s): " + invalids);
+    public String getFrom() {
+        return from;
     }
 
-    try {
-      from = XStream.from(tokenLines)
-          .filter(l -> l.isToken(FROM))
-          .map(DockerfileLine::getValue)
-          .last();
-    } catch (NoSuchElementException e) {
-      if (strict) {
-        throw new IllegalStateException("Dockerfile must start with FROM");
-      } else {
-        from = "";
-      }
+    public String getCmdShell() {
+        // strict: more then one cmd exception; else use latest cmd
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
     }
 
-    labels = XStream.from(tokenLines)
-        .filter(l -> l.isToken(LABEL))
-        .map(DockerfileLine::valueTokens)
-        .flatMap(in -> {
-          ImmutableList.Builder<ImmutableList<String>> builder = ImmutableList.builder();
-          ImmutableList<String> l = in;
-          while (l.size() > 2) {
-            int drop = 3;
-            ImmutableList<String> strings = XStream.from(l).take(drop).toList();
-
-            String key = strings.get(0);
-            String equal = strings.get(1);
-            String value = strings.get(2);
-            String last = XStream.from(l).take(4).last();
-            if (last.equals(" ")) {
-              drop = 4;
-            }
-            if (!strict && equal.equals(" ") && value.equals("=")) {
-              ImmutableList<String> strings2 = XStream.from(l).take(5).toList();
-              equal = value;
-              value = "= " + strings2.get(4);
-              drop = 5;
-            } else if (!strict && equal.equals("=") && value.equals("=")) {
-              ImmutableList<String> strings2 = XStream.from(l).take(4).toList();
-              equal = value;
-              value = strings2.get(2);
-              if (strings2.size() > 3) {
-                value += strings2.get(3);
-              }
-              drop = 4;
-            }
-            if (!equal.equals("=")) {
-              throw new IllegalStateException(
-                  "Syntax error - can't find = in \"" + value + "\". Must be of the form: name=value");
-            }
-
-            builder.add(ImmutableList.of(key, equal, value));
-            l = XStream.from(l).drop(drop).toList();
-          }
-
-          return XStream.from(builder.build());
-        })
-        .toMap(Dockerfile::getObject);
-
-    env = XStream.from(tokenLines)
-        .filter(l -> l.isToken(ENV))
-        .map(DockerfileLine::valueTokens)
-        .flatMap(in -> {
-          ImmutableList.Builder<ImmutableList<String>> builder = ImmutableList.builder();
-          ImmutableList<String> l = in;
-          while (l.size() > 2) {
-            if (l.contains("=")) {
-              int drop = 3;
-              ImmutableList<String> strings = XStream.from(l).take(drop).toList();
-
-              String key = strings.get(0);
-              String equal = strings.get(1);
-              String value = strings.get(2);
-              String last = XStream.from(l).take(4).last();
-              if (last.equals(" ")) {
-                drop = 4;
-              }
-              builder.add(ImmutableList.of(key, equal, value));
-              l = XStream.from(l).drop(drop).toList();
-            } else {
-              builder.add(ImmutableList.of(in.get(0), "=", XStream.from(in).drop(2).mkString("")));
-              l = ImmutableList.of();
-            }
-
-          }
-
-          return XStream.from(builder.build());
-        })
-        .toMap(Dockerfile::getObject);
-
-    copy = XStream.from(tokenLines)
-        .filter(l -> l.isToken(COPY))
-        .map(DockerfileLine::valueTokens)
-        .flatMap(in -> {
-          ImmutableList.Builder<ImmutableList<String>> builder = ImmutableList.builder();
-          if (in.size() == 3) {
-            builder.add(in);
-            return XStream.from(builder.build());
-          } else {
-            // TODO error handling
-            return XStream.from(builder.build());
-          }
-        })
-        .toMap(Dockerfile::getObject);
-  }
-
-  static Tuple<String, String> getObject(ImmutableList<String> line) {
-    String key = line.get(0);
-    String value = line.get(2);
-    return Tuple.of(key, value);
-  }
-
-  static ImmutableList<String> joindLines(ImmutableList<String> lines, String lc) {
-    ImmutableList.Builder<String> builder = ImmutableList.builder();
-    String buff = "";
-    for (int i = 0; i < lines.size(); i++) {
-      String l = lines.get(i);
-      String trim = l.trim();
-      if (!trim.endsWith(lc)) {
-        buff += l;
-        builder.add(buff);
-        buff = "";
-      } else {
-        String substring = trim.substring(0, trim.length() - 1);
-        buff += substring + "\n";
-      }
+    public ImmutableList<String> getCmd() {
+        // strict: more then one cmd exception; else use latest cmd
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
     }
-    return builder.build();
-  }
 
-  public String getFrom() {
-    return from;
-  }
-
-  public String getCmdShell() {
-    // strict: more then one cmd exception; else use latest cmd
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  public ImmutableList<String> getCmd() {
-    // strict: more then one cmd exception; else use latest cmd
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  public ImmutableMap<Integer, String> getExpose() {
-    // e.g. 80/tcp, 99/udp
-    // strict: redundant expose lines exceptions; else use all distinct
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  public ImmutableMap<String, String> getEnv() {
-    return env;
-  }
-
-  void getAdd() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  ImmutableMap<String, String> getCopy() {
-    return copy;
-  }
-
-  void getEntrypoint() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getVolume() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getUser() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getWorkdir() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getArg() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getOnbuild() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getStopsignal() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getHealthcheck() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  void getShell() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  public ImmutableList<String> getRunLines() {
-    throw new UnsupportedOperationException("Will be implemented later"); // TODO
-  }
-
-  public ImmutableMap<String, String> getLabels() {
-    return labels;
-  }
-
-  private static ImmutableList<String> lines(String content) {
-    return toLines(CharSource.wrap(content));
-  }
-
-  private static ImmutableList<String> lines(File file) {
-    return toLines(Files.asCharSource(file, StandardCharsets.UTF_8));
-  }
-
-  private static ImmutableList<String> toLines(CharSource charSource) {
-    try {
-      return charSource.readLines();
-    } catch (FileNotFoundException e) {
-      throw new UncheckedIOException(e.getMessage(), e);
-    } catch (IOException e) {
-      throw new IllegalStateException(e);
+    public ImmutableMap<Integer, String> getExpose() {
+        // e.g. 80/tcp, 99/udp
+        // strict: redundant expose lines exceptions; else use all distinct
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
     }
-  }
 
-  static File resourceFile(String resouce) {
-    URL resource = Resources.getResource(resouce);
-    try {
-      return new File(resource.toURI());
-    } catch (URISyntaxException e) {
-      throw new IllegalStateException(e);
+    public ImmutableMap<String, String> getEnv() {
+        return env;
     }
-  }
 
-  /**
-   * Like docker build
-   */
-  public static Dockerfile parse(String content) {
-    return new Dockerfile(content, false);
-  }
+    void getAdd() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
 
-  /**
-   * Like docker build
-   */
-  public static Dockerfile parse(File file) {
-    return new Dockerfile(file, false);
-  }
+    ImmutableMap<String, String> getCopy() {
+        return copy;
+    }
 
-  public static Dockerfile parseStrict(String content) {
-    return new Dockerfile(content, true);
-  }
+    void getEntrypoint() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
 
-  public static Dockerfile parseStrict(File file) {
-    return new Dockerfile(file, true);
-  }
+    void getVolume() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
 
+    void getUser() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    void getWorkdir() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    void getArg() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    void getOnbuild() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    void getStopsignal() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    void getHealthcheck() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    void getShell() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    public ImmutableList<String> getRunLines() {
+        throw new UnsupportedOperationException("Will be implemented later"); // TODO
+    }
+
+    public ImmutableMap<String, String> getLabels() {
+        return labels;
+    }
+
+
+    static File resourceFile(String resouce) {
+        URL resource = Resources.getResource(resouce);
+        try {
+            return new File(resource.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /*
+     * Like docker build
+     */
+    public static Dockerfile parse(String content) {
+        return JavaParser.parse(content, false);
+    }
+
+    /*
+     * Like docker build
+     */
+    public static Dockerfile parse(File file) {
+        return JavaParser.parse(file, false);
+    }
+
+    public static Dockerfile parseStrict(String content) {
+        return JavaParser.parse(content, true);
+    }
+
+    public static Dockerfile parseStrict(File file) {
+        return JavaParser.parse(file, true);
+    }
+
+    @Beta
+    static Object parseB(String content) {
+        Parsers.ParseResult<List<List<Object>>> doo = new ScalaParser().doParse(content);
+        return null;
+    }
 }
