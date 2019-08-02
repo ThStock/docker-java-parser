@@ -6,8 +6,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.collection.immutable.List;
-import scala.util.parsing.combinator.Parsers;
 
 import java.io.File;
 import java.net.URISyntaxException;
@@ -165,8 +163,9 @@ public class Dockerfile {
     }
 
     @Beta
-    static Object parseB(String content) {
-        Parsers.ParseResult<List<List<Object>>> doo = new ScalaParser().doParse(content);
-        return null;
+    static Dockerfile parseB(String content) {
+        ImmutableMap<String, String> labels = new ScalaParser().parseLabels(content);
+        return new Dockerfile(ImmutableList.of(), ImmutableList.of(), "from", labels,
+                ImmutableMap.of(), ImmutableMap.of());
     }
 }
