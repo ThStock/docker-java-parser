@@ -52,7 +52,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange4() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL a=\"=\"");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=\"=\"");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "="), testee.getLabels());
@@ -124,7 +124,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_multi_two() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL \"a\"=\"b\" \"b\"=\"c\"");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a\"=\"b\" \"b\"=\"c\"");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
@@ -133,7 +133,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_multi_two_space() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL \"a\"=\"b b\" \"b\"=\"c\"");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a\"=\"b b\" \"b\"=\"c\"");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b b", "b", "c"), testee.getLabels());
@@ -193,12 +193,6 @@ public class DockerfileTest {
         .withMessage("Dockerfile cannot be empty")
     ;
 
-  }
-
-  @Test
-  public void test_start_with_token() {
-    Dockerfile testee = Dockerfile.parseJ("LABEL a=b");
-    assertEquals(1, testee.lines.size());
   }
 
   @Test

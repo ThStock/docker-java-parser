@@ -9,6 +9,8 @@ case class Assign(key: String, value: String)
 
 case class Label(assigns: Seq[Assign])
 
+case class Env(assigns: Seq[Assign])
+
 object ScalaParser extends RegexParsers {
 
   case class PResult(pr: ParseResult[List[Any]])
@@ -28,12 +30,24 @@ object ScalaParser extends RegexParsers {
     val cont = """\"""
     val contNl = spaceOpt ~ cont ~ nl ~ indent
     val word = """\w+""".r
+    val noQuote = """[^"]+""".r
     val noSpace = """[\w=]+""".r
 
     def assignErr = word ~ "=" ~ word ~ space ~> word <~ space ~ word >> {
       (x => {
         err("can't find = in \"" + x + "\". Must be of the form: name=value")
       })
+    }
+
+    def assignQ1: Parser[Assign] = "\"" ~ noQuote ~ "\"=\"" ~ noQuote ~ "\"" ^^ {
+      terms: (String ~ String ~ String ~ String ~ String) => {
+        Assign(terms._1._1._1._2, terms._1._2)
+      }
+    }
+    def assignQ2: Parser[Assign] = word ~ "=\"" ~ noQuote ~ "\"" ^^ {
+      terms: (String ~ String ~ String ~ String) => {
+        Assign(terms._1._1._1, terms._1._2)
+      }
     }
 
     def assign1: Parser[Assign] = word ~ "=" ~ noSpace ^^ {
@@ -48,7 +62,7 @@ object ScalaParser extends RegexParsers {
       }
     }
 
-    def assign: Parser[Assign] = assignErr | assignStrange | assign1
+    def assign: Parser[Assign] = assignErr | assignStrange | assign1 | assignQ2 | assignQ1
 
     val from = """FROM """ ~ word <~ nl
 
