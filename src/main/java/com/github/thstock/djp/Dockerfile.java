@@ -1,6 +1,5 @@
 package com.github.thstock.djp;
 
-import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Resources;
@@ -143,27 +142,30 @@ public class Dockerfile {
     /*
      * Like docker build
      */
-    public static Dockerfile parse(String content) {
+    @Deprecated
+    public static Dockerfile parseJ(String content) {
         return JavaParser.parse(content, false);
     }
 
     /*
      * Like docker build
      */
-    public static Dockerfile parse(File file) {
+    @Deprecated
+    public static Dockerfile parseJ(File file) {
         return JavaParser.parse(file, false);
     }
 
-    public static Dockerfile parseStrict(String content) {
+    @Deprecated
+    public static Dockerfile parseJStrict(String content) {
         return JavaParser.parse(content, true);
     }
 
-    public static Dockerfile parseStrict(File file) {
+    @Deprecated
+    public static Dockerfile parseJStrict(File file) {
         return JavaParser.parse(file, true);
     }
 
-    @Beta
-    static Dockerfile parseB(String content) {
+    public static Dockerfile parse(String content) {
         ImmutableMap<String, String> labels = new ScalaParser().parseLabels(content);
         return new Dockerfile(ImmutableList.of(), ImmutableList.of(), "from", labels,
                 ImmutableMap.of(), ImmutableMap.of());

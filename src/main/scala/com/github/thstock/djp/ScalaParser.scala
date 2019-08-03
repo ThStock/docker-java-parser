@@ -17,26 +17,34 @@ private class ScalaParser extends RegexParsers {
     val eoi = """\z""".r // end of input
     val nl = eoi | eol
     val indent = """[ \t]*""".r
-    val cont = "[ ]*".r ~ """\""" ~ nl ~ indent
+    val spaceOpt = "[ ]*".r
+    val space = "[ ]+".r
+    val cont = """\"""
+    val contNl = spaceOpt ~ cont ~ nl ~ indent
     val word = """\w+""".r
+    val noSpace = """[\w=]+""".r
 
-    def assign: Parser[Assign] = word ~ "=".r ~ word ^^ {
+    def assignErr = word ~ "=" ~ word ~ space ~> word <~ space ~ word >> {
+      (x => {
+        err("can't find = in \"" + x + "\". Must be of the form: name=value")
+      })
+    }
+
+    def assign: Parser[Assign] = assignErr | word ~ "=" ~ noSpace ^^ {
       case terms => {
         Assign(terms._1._1, terms._2)
       }
     }
 
-    val assignCont = assign ~ cont
-
     val from = """FROM """ ~ word <~ nl
 
-    def label1: Parser[Label] = ("""LABEL """ ~> assign) ^^ {
+    def label1: Parser[Label] = ((Dockerfile.LABEL + " ") ~> rep1(assign <~ spaceOpt)) ^^ {
       case terms => {
-        Label(Seq(terms))
+        Label(terms)
       }
     }
 
-    def label2: Parser[Label] = ("""LABEL """ ~> (rep1(assignCont) ~ assign)) ^^ {
+    def label2: Parser[Label] = ((Dockerfile.LABEL + " ") ~> (rep1(assign ~ contNl) ~ assign)) ^^ {
       case terms => {
         val aT: Seq[Assign] = terms._1.map(_._1)
         Label(Seq(terms._2) ++ aT)
@@ -52,11 +60,22 @@ private class ScalaParser extends RegexParsers {
 
   def parseLabels(in: String): ImmutableMap[String, String] = {
     val value = doParse(in)
-    val labels: Seq[Assign] = value.get.filter(_.isInstanceOf[Label]).map(_.asInstanceOf[Label]).flatMap(_.assigns)
-    val b = ImmutableMap.builder[String, String]()
-    for (line <- labels) {
-      b.put(line.key, line.value)
+    value match {
+      case Success(vp, v) => {
+        val labels: Seq[Assign] = vp.filter(_.isInstanceOf[Label]).map(_.asInstanceOf[Label]).flatMap(_.assigns)
+        val b = ImmutableMap.builder[String, String]()
+        for (line <- labels) {
+          b.put(line.key, line.value)
+        }
+        b.build()
+      }
+      case Failure(msg, next) => {
+        throw new IllegalStateException("failure " + msg)
+      }
+      case Error(msg, next) => {
+        throw new IllegalStateException("Syntax error - " + msg)
+      }
     }
-    b.build()
+
   }
 }

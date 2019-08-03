@@ -15,7 +15,7 @@ public class DockerfileTest {
   @Test
   public void test_lines_newline() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\r\nLABEL\ta=b");
+    Dockerfile testee = Dockerfile.parseJ("FROM a\r\nLABEL\ta=b");
 
     // THEN
     assertEquals(ImmutableList.of("FROM a", "LABEL\ta=b"), testee.allLines);
@@ -24,7 +24,7 @@ public class DockerfileTest {
   @Test
   public void test_lines_effective() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("\n\nFROM a\nLABEL a=b \t\nLABEL b=c\n \t");
+    Dockerfile testee = Dockerfile.parseJ("\n\nFROM a\nLABEL a=b \t\nLABEL b=c\n \t");
 
     // THEN
     assertEquals(ImmutableList.of("FROM a", "LABEL a=b \t", "LABEL b=c"), testee.lines);
@@ -33,7 +33,7 @@ public class DockerfileTest {
   @Test
   public void test_labels() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseB("FROM a\nLABEL a=b");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b"), testee.getLabels());
@@ -42,7 +42,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a = b");
+    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL a = b");
 
     // THEN
     Assertions.assertThat(testee.getLabels())
@@ -52,7 +52,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange2() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a==b");
+    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL a==b");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "=b"), testee.getLabels());
@@ -70,7 +70,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange4() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=\"=\"");
+    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL a=\"=\"");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "="), testee.getLabels());
@@ -80,7 +80,7 @@ public class DockerfileTest {
   public void test_labels_strange_strict() {
     // GIVEN / WHEN
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parseStrict("FROM a\nLABEL a = b"))
+        .isThrownBy(() -> Dockerfile.parseJStrict("FROM a\nLABEL a = b"))
         .withMessage("Syntax error - can't find = in \"=\". Must be of the form: name=value");
 
   }
@@ -88,7 +88,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange2_strict() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseStrict("FROM a\nLABEL a==b");
+    Dockerfile testee = Dockerfile.parseJStrict("FROM a\nLABEL a==b");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "="), testee.getLabels()); // TODO Exception?
@@ -97,7 +97,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange3_strict() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseStrict("FROM a\nLABEL a==");
+    Dockerfile testee = Dockerfile.parseJStrict("FROM a\nLABEL a==");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "="), testee.getLabels()); // TODO Exception?
@@ -106,7 +106,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange4_strict() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseStrict("FROM a\nLABEL a=\"=\"");
+    Dockerfile testee = Dockerfile.parseJStrict("FROM a\nLABEL a=\"=\"");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "="), testee.getLabels()); // TODO Exception?
@@ -116,7 +116,7 @@ public class DockerfileTest {
   public void test_labels_invalid() {
     // GIVEN / WHEN
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parse("FROM a\nLABEL a= = z"))
+        .isThrownBy(() -> Dockerfile.parseJ("FROM a\nLABEL a= = z"))
         .withMessage("Syntax error - can't find = in \"z\". Must be of the form: name=value")
     ;
   }
@@ -125,15 +125,15 @@ public class DockerfileTest {
   public void test_labels_invalid_two() {
     // GIVEN / WHEN
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parse("FROM a\nLABEL a=b b c=d"))
-        .withMessage("Syntax error - can't find = in \"c\". Must be of the form: name=value")
+        .isThrownBy(() -> Dockerfile.parse("FROM a\nLABEL a=b e c=d"))
+        .withMessage("Syntax error - can't find = in \"e\". Must be of the form: name=value")
     ;
   }
 
   @Test
   public void test_labels_multi() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseB("FROM a\nLABEL a=b\nLABEL b=c");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\nLABEL b=c");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
@@ -142,7 +142,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_multi_two() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a\"=\"b\" \"b\"=\"c\"");
+    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL \"a\"=\"b\" \"b\"=\"c\"");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
@@ -151,7 +151,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_multi_two_space() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a\"=\"b b\" \"b\"=\"c\"");
+    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL \"a\"=\"b b\" \"b\"=\"c\"");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b b", "b", "c"), testee.getLabels());
@@ -169,7 +169,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_multiline() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseB("FROM a\nLABEL a=b\\\n   b=c");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\\\n   b=c");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
@@ -178,7 +178,7 @@ public class DockerfileTest {
   @Test
   public void testMinimal() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM debian:stretch-slim");
+    Dockerfile testee = Dockerfile.parseJ("FROM debian:stretch-slim");
 
     // THEN
     assertEquals(1, testee.allLines.size());
@@ -189,7 +189,7 @@ public class DockerfileTest {
   @Test
   public void testMinimal_multistaged() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM debian:stretch-slim\nFROM alpine:3.7");
+    Dockerfile testee = Dockerfile.parseJ("FROM debian:stretch-slim\nFROM alpine:3.7");
 
     // THEN
     assertEquals("alpine:3.7", testee.getFrom());
@@ -198,7 +198,7 @@ public class DockerfileTest {
   @Test
   public void test_empty() {
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parse(""))
+        .isThrownBy(() -> Dockerfile.parseJ(""))
         .withMessage("Dockerfile cannot be empty")
     ;
 
@@ -207,7 +207,7 @@ public class DockerfileTest {
   @Test
   public void test_empty_var() {
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parse(" \n\t"))
+        .isThrownBy(() -> Dockerfile.parseJ(" \n\t"))
         .withMessage("Dockerfile cannot be empty")
     ;
 
@@ -215,14 +215,14 @@ public class DockerfileTest {
 
   @Test
   public void test_start_with_token() {
-    Dockerfile testee = Dockerfile.parse("LABEL a=b");
+    Dockerfile testee = Dockerfile.parseJ("LABEL a=b");
     assertEquals(1, testee.lines.size());
   }
 
   @Test
   public void test_start_with_token_strict() {
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parseStrict("LABEL a=b"))
+        .isThrownBy(() -> Dockerfile.parseJStrict("LABEL a=b"))
         .withMessage("Dockerfile must start with FROM")
     ;
   }
@@ -230,7 +230,7 @@ public class DockerfileTest {
   @Test
   public void test_start_with_no_token() {
     Assertions.assertThatExceptionOfType(IllegalStateException.class)
-        .isThrownBy(() -> Dockerfile.parse("a=b"))
+        .isThrownBy(() -> Dockerfile.parseJ("a=b"))
         .withMessage("Invalid Dockerfileline: 'a=b'")
     ;
   }
@@ -238,7 +238,7 @@ public class DockerfileTest {
   @Test
   public void test_env_equal() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nENV myName=\"John Doe\" myDog=Rex\\ The\\ Dog \\\n"
+    Dockerfile testee = Dockerfile.parseJ("FROM a\nENV myName=\"John Doe\" myDog=Rex\\ The\\ Dog \\\n"
         + "    myCat=fluffy");
 
     // THEN
@@ -249,7 +249,7 @@ public class DockerfileTest {
   @Test
   public void test_env() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nENV myName John Doe\n"
+    Dockerfile testee = Dockerfile.parseJ("FROM a\nENV myName John Doe\n"
         + "ENV myDog Rex The Dog\n"
         + "ENV myCat fluffy");
 
@@ -262,7 +262,7 @@ public class DockerfileTest {
   public void test_var() {
     // GIVEN / WHEN
     // TODO export env variable "some"
-    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL test=${some}\n");
+    Dockerfile testee = Dockerfile.parseJ("FROM scratch\nLABEL test=${some}\n");
     // THEN
     // TODO unclear what will happen
   }
@@ -270,7 +270,7 @@ public class DockerfileTest {
   @Test
   public void test_var_escaped() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL test=\\${some:invalid}\n");
+    Dockerfile testee = Dockerfile.parseJ("FROM scratch\nLABEL test=\\${some:invalid}\n");
     // THEN
     assertEquals(ImmutableMap.of("test", "${some:invalid}"), testee.getLabels());
   }
@@ -278,7 +278,7 @@ public class DockerfileTest {
   @Test
   public void test_invalid_var() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL test=${some:invalid}\n");
+    Dockerfile testee = Dockerfile.parseJ("FROM scratch\nLABEL test=${some:invalid}\n");
     // THEN
     // failed to process "${some:invalid}": unsupported modifier (i) in substitution
     // TODO test for exception
@@ -287,7 +287,7 @@ public class DockerfileTest {
   @Test
   public void test_copy() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM scratch\nCOPY a b\n");
+    Dockerfile testee = Dockerfile.parseJ("FROM scratch\nCOPY a b\n");
     // THEN
     assertEquals(ImmutableMap.of("a", "b"), testee.getCopy());
   }
@@ -295,7 +295,7 @@ public class DockerfileTest {
   @Test
   public void test_copy_two() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM scratch\nCOPY a b\nCOPY ./from /to/other\n");
+    Dockerfile testee = Dockerfile.parseJ("FROM scratch\nCOPY a b\nCOPY ./from /to/other\n");
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "./from", "/to/other"), testee.getCopy());
   }
@@ -307,7 +307,7 @@ public class DockerfileTest {
     File content = Dockerfile.resourceFile("samples/Nginx");
 
     // WHEN
-    Dockerfile testee = Dockerfile.parse(content);
+    Dockerfile testee = Dockerfile.parseJ(content);
 
     // THEN
     assertEquals(99, testee.allLines.size());
@@ -321,7 +321,7 @@ public class DockerfileTest {
     File content = Dockerfile.resourceFile("samples/Nginx");
 
     // WHEN
-    Dockerfile testee = Dockerfile.parseStrict(content);
+    Dockerfile testee = Dockerfile.parseJStrict(content);
 
     // THEN
     assertEquals(99, testee.allLines.size());
@@ -337,7 +337,7 @@ public class DockerfileTest {
 
     // WHEN / THEN
     Assertions.assertThatExceptionOfType(UncheckedIOException.class)
-        .isThrownBy(() -> Dockerfile.parse(content))
+        .isThrownBy(() -> Dockerfile.parseJ(content))
         .withMessageStartingWith("n.a ("); // No such file or directory)
 
   }
