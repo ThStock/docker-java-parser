@@ -52,10 +52,19 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange4() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=\"=\"");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a.a=\"=\"");
 
     // THEN
-    assertEquals(ImmutableMap.of("a", "="), testee.getLabels());
+    assertEquals(ImmutableMap.of("a.a", "="), testee.getLabels());
+  }
+
+  @Test
+  public void test_labels_strange4_multiline() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=\"b-@\" \\\n  b.b=\"a:@ \\\" \"");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "b-@", "b.b", "a:@ \" "), testee.getLabels());
   }
 
   @Test
@@ -122,12 +131,31 @@ public class DockerfileTest {
   }
 
   @Test
-  public void test_labels_multi_two() {
+  public void test_label_escaped() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a\"=\"b\" \"b\"=\"c\"");
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL \"a.s\"=\"b\\\" a\"");
 
     // THEN
-    assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
+    assertEquals(ImmutableMap.of("a.s", "b\" a"), testee.getLabels());
+  }
+
+  @Test
+  public void test_label_escaped_max() {
+    // GIVEN / WHEN
+    String m = TestUtil.repeat("b\\\" a", 2500);
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL \"a.s\"=\"" + m + "\"");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a.s", TestUtil.repeat("b\" a", 2500)), testee.getLabels());
+  }
+
+  @Test
+  public void test_labels_multi_two() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a.s\"=\"b\" \"b\"=\"c\"");
+
+    // THEN
+    assertEquals(ImmutableMap.of("a.s", "b", "b", "c"), testee.getLabels());
   }
 
   @Test

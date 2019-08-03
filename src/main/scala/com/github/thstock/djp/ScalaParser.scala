@@ -15,6 +15,7 @@ case class From(from: String)
 
 object ScalaParser extends RegexParsers {
 
+
   case class PResult(pr: ParseResult[List[Any]])
 
   override val skipWhitespace = false
@@ -34,7 +35,12 @@ object ScalaParser extends RegexParsers {
     val word = """\w+""".r
     val noQuote = """[^"]+""".r
     val wordEq = """[\w=]+""".r
-    val noSpace = """[\S]+""".r
+
+    def quotedWord =
+      """"""" ~> rep1("([^\\\\\"]|\\\\\")".r) <~ """"""" ^^
+        (x => x.mkString("").replace("\\\"", "\""))
+
+    val noSpace = """\S+""".r
 
     def assignErr = word ~ "=" ~ word ~ space ~> word <~ space ~ word >> {
       (x => {
@@ -42,17 +48,18 @@ object ScalaParser extends RegexParsers {
       })
     }
 
-    def assignQ1: Parser[Assign] = "\"" ~ noQuote ~ "\"=\"" ~ noQuote ~ "\"" ^^ {
-      terms: (String ~ String ~ String ~ String ~ String) => {
-        Assign(terms._1._1._1._2, terms._1._2)
+    def assignQuote: Parser[Assign] = quotedWord ~ "=" ~ quotedWord ^^ {
+      terms => {
+        Assign(terms._1._1, terms._2)
       }
     }
 
-    def assignQ2: Parser[Assign] = word ~ "=\"" ~ noQuote ~ "\"" ^^ {
-      terms: (String ~ String ~ String ~ String) => {
-        Assign(terms._1._1._1, terms._1._2)
+    def assignQright: Parser[Assign] =
+      """[\.\w]+""".r ~ "=" ~ quotedWord ^^ {
+        terms => {
+          Assign(terms._1._1, terms._2)
+        }
       }
-    }
 
     def assign1: Parser[Assign] = word ~ "=" ~ wordEq ^^ {
       terms: (String ~ String ~ String) => {
@@ -66,21 +73,21 @@ object ScalaParser extends RegexParsers {
       }
     }
 
-    def assign: Parser[Assign] = assignErr | assignStrange | assign1 | assignQ2 | assignQ1
+    def assign: Parser[Assign] = assignErr | assignQright | assignStrange | assign1 | assignQuote
 
     def from =
       """FROM """ ~> noSpace ^^ {
         terms ⇒ From(terms)
       }
 
-    def label1: Parser[Label] = (("LABEL" + " ") ~> rep1(assign <~ spaceOpt)) ^^ {
-      case terms => {
+    def label1: Parser[Label] = (("LABEL ") ~> rep1(assign <~ spaceOpt)) ^^ {
+      terms => {
         Label(terms)
       }
     }
 
-    def label2: Parser[Label] = (("LABEL" + " ") ~> (rep1(assign ~ contNl) ~ assign)) ^^ {
-      case terms => {
+    def label2: Parser[Label] = (("LABEL ") ~> (rep1(assign ~ contNl) ~ assign)) ^^ {
+      terms => {
         val aT: Seq[Assign] = terms._1.map(_._1)
         Label(Seq(terms._2) ++ aT)
       }
@@ -135,7 +142,7 @@ object ScalaParser extends RegexParsers {
           b.put(line.key, line.value)
         }
         val labelsO = b.build()
-        
+
         val froms: Seq[String] = vp.filter(_.isInstanceOf[From]).map(_.asInstanceOf[From]).map(_.from)
 
         (froms.head, labelsO,
