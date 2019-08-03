@@ -11,6 +11,8 @@ case class Label(assigns: Seq[Assign])
 
 case class Env(assigns: Seq[Assign])
 
+case class From(from: String)
+
 object ScalaParser extends RegexParsers {
 
   case class PResult(pr: ParseResult[List[Any]])
@@ -31,7 +33,8 @@ object ScalaParser extends RegexParsers {
     val contNl = spaceOpt ~ cont ~ nl ~ indent
     val word = """\w+""".r
     val noQuote = """[^"]+""".r
-    val noSpace = """[\w=]+""".r
+    val wordEq = """[\w=]+""".r
+    val noSpace = """[\S]+""".r
 
     def assignErr = word ~ "=" ~ word ~ space ~> word <~ space ~ word >> {
       (x => {
@@ -44,13 +47,14 @@ object ScalaParser extends RegexParsers {
         Assign(terms._1._1._1._2, terms._1._2)
       }
     }
+
     def assignQ2: Parser[Assign] = word ~ "=\"" ~ noQuote ~ "\"" ^^ {
       terms: (String ~ String ~ String ~ String) => {
         Assign(terms._1._1._1, terms._1._2)
       }
     }
 
-    def assign1: Parser[Assign] = word ~ "=" ~ noSpace ^^ {
+    def assign1: Parser[Assign] = word ~ "=" ~ wordEq ^^ {
       terms: (String ~ String ~ String) => {
         Assign(terms._1._1, terms._2)
       }
@@ -64,7 +68,10 @@ object ScalaParser extends RegexParsers {
 
     def assign: Parser[Assign] = assignErr | assignStrange | assign1 | assignQ2 | assignQ1
 
-    val from = """FROM """ ~ word <~ nl
+    def from =
+      """FROM """ ~> noSpace ^^ {
+        terms ⇒ From(terms)
+      }
 
     def label1: Parser[Label] = (("LABEL" + " ") ~> rep1(assign <~ spaceOpt)) ^^ {
       case terms => {
@@ -79,30 +86,64 @@ object ScalaParser extends RegexParsers {
       }
     }
 
-    val list: Parser[List[Any]] = rep(from | label2 | label1)
+    def run = "RUN .*".r
+
+    def CMD = "CMD .*".r
+
+    def MAINTAINER = "MAINTAINER .*".r
+
+    def EXPOSE = "EXPOSE .*".r
+
+    def ENV = "ENV .*".r
+
+    def ADD = "ADD .*".r
+
+    def COPY = "COPY .*".r
+
+    def ENTRYPOINT = "ENTRYPOINT .*".r
+
+    def VOLUME = "VOLUME .*".r
+
+    def USER = "USER .*".r
+
+    def WORKDIR = "WORKDIR .*".r
+
+    def ARG = "ARG .*".r
+
+    def ONBUILD = "ONBUILD .*".r
+
+    def STOPSIGNAL = "STOPSIGNAL .*".r
+
+    def HEALTHCHECK = "HEALTHCHECK .*".r
+
+    def SHELL = "SHELL .*".r
+
+    val list: Parser[List[Any]] = rep(from | label2 | label1 |
+      run | CMD | MAINTAINER | EXPOSE | ENV | ADD | COPY | ENTRYPOINT | VOLUME | USER |
+      WORKDIR | ARG | ONBUILD | STOPSIGNAL | HEALTHCHECK | SHELL)
     val lists: Parser[List[List[Any]]] = repsep(list, rep1(eol))
 
     val value = parseAll(lists, s)
     val r = ScalaParser.PResult(value.map(_.flatten))
-    val labels = ScalaParser.labels(r)
-    ("from", labels,
-      ImmutableMap.of[String, String],
-      ImmutableMap.of[String, String])
-  }
 
-  private def labels(in: ScalaParser.PResult): ImmutableMap[String, String] = {
-    val value = in.pr
-    value match {
+    r.pr match {
       case Success(vp, v) => {
+
         val labels: Seq[Assign] = vp.filter(_.isInstanceOf[Label]).map(_.asInstanceOf[Label]).flatMap(_.assigns)
         val b = ImmutableMap.builder[String, String]()
         for (line <- labels) {
           b.put(line.key, line.value)
         }
-        b.build()
+        val labelsO = b.build()
+        
+        val froms: Seq[String] = vp.filter(_.isInstanceOf[From]).map(_.asInstanceOf[From]).map(_.from)
+
+        (froms.head, labelsO,
+          ImmutableMap.of[String, String],
+          ImmutableMap.of[String, String])
       }
-      case Failure(msg, next) => {
-        throw new IllegalStateException("failure " + msg)
+      case f: Failure => {
+        throw new IllegalStateException("failure: " + f.toString())
       }
       case Error(msg, next) => {
         throw new IllegalStateException("Syntax error - " + msg)

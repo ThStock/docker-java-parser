@@ -160,10 +160,9 @@ public class DockerfileTest {
   @Test
   public void testMinimal() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM debian:stretch-slim");
+    Dockerfile testee = Dockerfile.parse("FROM debian:stretch-slim");
 
     // THEN
-    assertEquals(1, testee.allLines.size());
     assertEquals("debian:stretch-slim", testee.getFrom());
     assertEquals(ImmutableMap.of(), testee.getLabels());
   }
