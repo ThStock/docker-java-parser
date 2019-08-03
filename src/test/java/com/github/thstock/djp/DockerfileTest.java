@@ -1,34 +1,16 @@
 package com.github.thstock.djp;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import org.assertj.core.api.Assertions;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
 import java.io.File;
 import java.io.UncheckedIOException;
 
-import static org.junit.Assert.assertEquals;
+import org.assertj.core.api.Assertions;
+import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 public class DockerfileTest {
-
-  @Test
-  public void test_lines_newline() {
-    // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM a\r\nLABEL\ta=b");
-
-    // THEN
-    assertEquals(ImmutableList.of("FROM a", "LABEL\ta=b"), testee.allLines);
-  }
-
-  @Test
-  public void test_lines_effective() {
-    // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("\n\nFROM a\nLABEL a=b \t\nLABEL b=c\n \t");
-
-    // THEN
-    assertEquals(ImmutableList.of("FROM a", "LABEL a=b \t", "LABEL b=c"), testee.lines);
-  }
 
   @Test
   public void test_labels() {
@@ -42,7 +24,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL a = b");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a = b");
 
     // THEN
     Assertions.assertThat(testee.getLabels())
@@ -52,7 +34,7 @@ public class DockerfileTest {
   @Test
   public void test_labels_strange2() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM a\nLABEL a==b");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a==b");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "=b"), testee.getLabels());

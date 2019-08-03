@@ -1,18 +1,24 @@
+
 package com.github.thstock.djp
 
 import com.google.common.collect.ImmutableMap
 
 import scala.util.parsing.combinator.RegexParsers
 
-private class ScalaParser extends RegexParsers {
+case class Assign(key: String, value: String)
+
+case class Label(assigns: Seq[Assign])
+
+object ScalaParser extends RegexParsers {
+
+  case class PResult(pr: ParseResult[List[Any]])
 
   override val skipWhitespace = false
 
-  case class Assign(key: String, value: String)
-
-  case class Label(assigns: Seq[Assign])
-
-  def doParse(s: String): ParseResult[List[Any]] = {
+  def doParse(s: String, strict: Boolean): (String,
+    ImmutableMap[String, String],
+    ImmutableMap[String, String],
+    ImmutableMap[String, String]) = {
     val eol = sys.props("line.separator")
     val eoi = """\z""".r // end of input
     val nl = eoi | eol
@@ -30,21 +36,29 @@ private class ScalaParser extends RegexParsers {
       })
     }
 
-    def assign: Parser[Assign] = assignErr | word ~ "=" ~ noSpace ^^ {
-      case terms => {
+    def assign1: Parser[Assign] = word ~ "=" ~ noSpace ^^ {
+      terms: (String ~ String ~ String) => {
         Assign(terms._1._1, terms._2)
       }
     }
 
+    def assignStrange: Parser[Assign] = (word ~ space ~ "=" ~ space ~ word) ^^ {
+      terms: (String ~ String ~ String ~ String ~ String) => {
+        Assign(terms._1._1._1._1, "= " + terms._2) // strange
+      }
+    }
+
+    def assign: Parser[Assign] = assignErr | assignStrange | assign1
+
     val from = """FROM """ ~ word <~ nl
 
-    def label1: Parser[Label] = ((Dockerfile.LABEL + " ") ~> rep1(assign <~ spaceOpt)) ^^ {
+    def label1: Parser[Label] = (("LABEL" + " ") ~> rep1(assign <~ spaceOpt)) ^^ {
       case terms => {
         Label(terms)
       }
     }
 
-    def label2: Parser[Label] = ((Dockerfile.LABEL + " ") ~> (rep1(assign ~ contNl) ~ assign)) ^^ {
+    def label2: Parser[Label] = (("LABEL" + " ") ~> (rep1(assign ~ contNl) ~ assign)) ^^ {
       case terms => {
         val aT: Seq[Assign] = terms._1.map(_._1)
         Label(Seq(terms._2) ++ aT)
@@ -55,11 +69,15 @@ private class ScalaParser extends RegexParsers {
     val lists: Parser[List[List[Any]]] = repsep(list, rep1(eol))
 
     val value = parseAll(lists, s)
-    value.map(_.flatten)
+    val r = ScalaParser.PResult(value.map(_.flatten))
+    val labels = ScalaParser.labels(r)
+    ("from", labels,
+      ImmutableMap.of[String, String],
+      ImmutableMap.of[String, String])
   }
 
-  def parseLabels(in: String): ImmutableMap[String, String] = {
-    val value = doParse(in)
+  private def labels(in: ScalaParser.PResult): ImmutableMap[String, String] = {
+    val value = in.pr
     value match {
       case Success(vp, v) => {
         val labels: Seq[Assign] = vp.filter(_.isInstanceOf[Label]).map(_.asInstanceOf[Label]).flatMap(_.assigns)
@@ -76,6 +94,9 @@ private class ScalaParser extends RegexParsers {
         throw new IllegalStateException("Syntax error - " + msg)
       }
     }
-
   }
 }
+
+
+
+
