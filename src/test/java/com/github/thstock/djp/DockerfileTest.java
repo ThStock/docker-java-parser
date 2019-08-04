@@ -150,6 +150,29 @@ public class DockerfileTest {
   }
 
   @Test
+  public void test_label_multi() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM scratch\n"
+        + "LABEL a=a\\\n"
+        + "      b=\"n\\\nn\""
+    );
+
+    // THEN
+    assertEquals(ImmutableMap.of("a", "a", "b", "n\nn"), testee.getLabels());
+  }
+
+  @Test
+  public void test_label_multi2() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM scratch\n"
+        + "LABEL a=\"n\\n\\\nn\""
+    );
+
+    // THEN
+    assertEquals(ImmutableMap.of("a","n\\n\nn"), testee.getLabels());
+  }
+
+  @Test
   public void test_labels_multi_two() {
     // GIVEN / WHEN
     Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a.s\"=\"b\" \"b\"=\"c\"");
@@ -302,7 +325,6 @@ public class DockerfileTest {
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "./from", "/to/other"), testee.getCopy());
   }
-
 
   @Test
   public void test_file() {
