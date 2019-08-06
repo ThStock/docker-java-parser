@@ -35,24 +35,27 @@ object ScalaParser extends RegexParsers {
 
     def contNl = spaceOpt ~ cont ~ nl ~ indent ^^ (_ => ContNl())
 
-    def noQuoteEscapedQuote = "([^\\\\\"]|\\\\\"|\\\\n)".r
+    def noQuoteEscapedQuote = "([^\\\\\"]|\\\\\"|\\\\#|\\\\n)".r
 
     val word = """\w+""".r
     val noQuote = """[^"]+""".r
     val wordEq = """[\w=]+""".r
 
-    def quotedWord =
+    def quotedWord = {
+      def re(in: String) = in.replace("\\\"", "\"")
+        .replace("\\#", "#")
       """"""" ~> rep1(noQuoteEscapedQuote | contNl) <~ """"""" ^^ {
         ((x: List[String]) => {
-          x.mkString("").replace("\\\"", "\"")
+          re(x.mkString(""))
         })
         ((x: List[Any]) => {
           x.map {
-            case s: String => s.replace("\\\"", "\"")
+            case s: String => re(s)
             case _: ContNl => "\n"
           }.mkString("")
         })
       }
+    }
 
     val noSpace = """\S+""".r
 

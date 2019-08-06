@@ -173,6 +173,17 @@ public class DockerfileTest {
   }
 
   @Test
+  public void test_label_escaped_comment() {
+    // GIVEN / WHEN
+    Dockerfile testee = Dockerfile.parse("FROM scratch\n"
+        + "LABEL a=\"\\#\""
+    );
+
+    // THEN
+    assertEquals(ImmutableMap.of("a","#"), testee.getLabels());
+  }
+
+  @Test
   public void test_labels_multi_two() {
     // GIVEN / WHEN
     Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a.s\"=\"b\" \"b\"=\"c\"");
