@@ -7,13 +7,17 @@ import scala.util.parsing.combinator.RegexParsers
 
 case class Assign(key: String, value: String)
 
-case class Label(assigns: Seq[Assign])
+trait Assignable {
+  val assigns: Seq[Assign]
+}
 
-case class Env(assigns: Seq[Assign])
+case class Label(assigns: Seq[Assign]) extends Assignable
+
+case class Env(assigns: Seq[Assign]) extends Assignable
 
 case class From(from: String)
 
-case class ContNl(indent:String)
+case class ContNl(indent: String)
 
 object ScalaParser extends RegexParsers {
 
@@ -97,17 +101,23 @@ object ScalaParser extends RegexParsers {
         terms ⇒ From(terms)
       }
 
-    def label1: Parser[Label] = (("LABEL ") ~> rep1(assign <~ spaceOpt)) ^^ {
+    def assignP1(string: String): Parser[Seq[Assign]] = (string ~> rep1(assign <~ spaceOpt)) ^^ {
       terms => {
-        Label(terms)
+        terms
       }
     }
 
-    def label2: Parser[Label] = (("LABEL ") ~> (rep1(assign <~ contNl) ~ assign)) ^^ {
+    def assignP2(string: String): Parser[Seq[Assign]] = (string ~> (rep1(assign <~ contNl) ~ assign)) ^^ {
       terms => {
         val aT: Seq[Assign] = terms._1
-        Label(Seq(terms._2) ++ aT)
+        Seq(terms._2) ++ aT
       }
+    }
+
+    def assignP(key: String): Parser[Seq[Assign]] = (assignP2(key) | assignP1(key))
+
+    def label: Parser[Label] = {
+      assignP("LABEL ") ^^ { assigns => Label(assigns) }
     }
 
     def run = "RUN .*".r
@@ -118,7 +128,9 @@ object ScalaParser extends RegexParsers {
 
     def EXPOSE = "EXPOSE .*".r
 
-    def ENV = "ENV .*".r
+    def ENV: Parser[Env] = {
+      assignP("ENV ") ^^ { assigns => Env(assigns) }
+    }
 
     def ADD = "ADD .*".r
 
@@ -142,7 +154,7 @@ object ScalaParser extends RegexParsers {
 
     def SHELL = "SHELL .*".r
 
-    val list: Parser[List[Any]] = rep(from | label2 | label1 |
+    val list: Parser[List[Any]] = rep(from | label |
       run | CMD | MAINTAINER | EXPOSE | ENV | ADD | COPY | ENTRYPOINT | VOLUME | USER |
       WORKDIR | ARG | ONBUILD | STOPSIGNAL | HEALTHCHECK | SHELL)
     val lists: Parser[List[List[Any]]] = repsep(list, rep1(eol))
@@ -153,17 +165,19 @@ object ScalaParser extends RegexParsers {
     r.pr match {
       case Success(vp, v) => {
 
-        val labels: Seq[Assign] = vp.filter(_.isInstanceOf[Label]).map(_.asInstanceOf[Label]).flatMap(_.assigns)
-        val b = ImmutableMap.builder[String, String]()
-        for (line <- labels) {
-          b.put(line.key, line.value)
+        def toImmutableMap[T <: Assignable](): ImmutableMap[String, String] = {
+          val labels: Seq[Assign] = vp.filter(_.isInstanceOf[T]).map(_.asInstanceOf[T]).flatMap(_.assigns)
+          val b = ImmutableMap.builder[String, String]()
+          for (line <- labels) {
+            b.put(line.key, line.value)
+          }
+          b.build()
         }
-        val labelsO = b.build()
 
         val froms: Seq[String] = vp.filter(_.isInstanceOf[From]).map(_.asInstanceOf[From]).map(_.from)
 
-        (froms.head, labelsO,
-          ImmutableMap.of[String, String],
+        (froms.head, toImmutableMap[Label](),
+          toImmutableMap[Env](),
           ImmutableMap.of[String, String])
       }
       case f: Failure => {
