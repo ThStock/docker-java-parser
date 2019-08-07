@@ -13,7 +13,7 @@ case class Env(assigns: Seq[Assign])
 
 case class From(from: String)
 
-case class ContNl()
+case class ContNl(indent:String)
 
 object ScalaParser extends RegexParsers {
 
@@ -33,7 +33,7 @@ object ScalaParser extends RegexParsers {
     val space = "[ ]+".r
     val cont = """\"""
 
-    def contNl = spaceOpt ~ cont ~ nl ~ indent ^^ (_ => ContNl())
+    def contNl = spaceOpt ~ cont ~ nl ~> indent ^^ (term => ContNl(term))
 
     def noQuoteEscapedQuote = "([^\\\\\"]|\\\\\"|\\\\#|\\\\n)".r
 
@@ -43,7 +43,7 @@ object ScalaParser extends RegexParsers {
 
     def quotedWord = {
       def re(in: String) = in.replace("\\\"", "\"")
-        .replace("\\#", "#")
+        .replace("\\#", "#").replace("\\n", "\n")
       """"""" ~> rep1(noQuoteEscapedQuote | contNl) <~ """"""" ^^ {
         ((x: List[String]) => {
           re(x.mkString(""))
@@ -51,7 +51,7 @@ object ScalaParser extends RegexParsers {
         ((x: List[Any]) => {
           x.map {
             case s: String => re(s)
-            case _: ContNl => "\n"
+            case cl: ContNl => cl.indent
           }.mkString("")
         })
       }
