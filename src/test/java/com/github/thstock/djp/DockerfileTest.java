@@ -297,7 +297,7 @@ public class DockerfileTest {
   @Test
   public void test_env() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM a\nENV myName John Doe\n"
+    Dockerfile testee = Dockerfile.parse("FROM a\nENV myName John Doe\n"
         + "ENV myDog Rex The Dog\n"
         + "ENV myCat fluffy");
 

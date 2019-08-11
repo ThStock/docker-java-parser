@@ -129,7 +129,13 @@ object ScalaParser extends RegexParsers {
     def EXPOSE = "EXPOSE .*".r
 
     def ENV: Parser[Env] = {
-      assignP("ENV ") ^^ { assigns => Env(assigns) }
+      def envAssign = assignP("ENV ") ^^ { assigns => Env(assigns) }
+
+      def envE = "ENV " ~> word ~ rep1(space ~ word) ^^ {
+        (terms) => Env(Seq(Assign(terms._1, terms._2.map(_._2).mkString(" "))))
+      }
+
+      envAssign | envE
     }
 
     def ADD = "ADD .*".r
