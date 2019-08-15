@@ -318,7 +318,7 @@ public class DockerfileTest {
   @Test
   public void test_var_escaped() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parseJ("FROM scratch\nLABEL test=\\${some:invalid}\n");
+    Dockerfile testee = Dockerfile.parse("FROM scratch\nLABEL test=\\${some:invalid}\n");
     // THEN
     assertEquals(ImmutableMap.of("test", "${some:invalid}"), testee.getLabels());
   }

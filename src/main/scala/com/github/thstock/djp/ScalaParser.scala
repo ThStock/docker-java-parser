@@ -43,7 +43,7 @@ object ScalaParser extends RegexParsers {
 
     val word = """\w+""".r
     val noQuote = """[^"]+""".r
-    val wordEq = """[\w=]+""".r
+    val wordEq = """[\w=:{}]|(\\\$)""".r
 
     def quotedWord = {
       def re(in: String) = in.replace("\\\"", "\"")
@@ -82,9 +82,9 @@ object ScalaParser extends RegexParsers {
         }
       }
 
-    def assign1: Parser[Assign] = word ~ "=" ~ wordEq ^^ {
-      terms: (String ~ String ~ String) => {
-        Assign(terms._1._1, terms._2)
+    def assign1: Parser[Assign] = word ~ "=" ~ rep1(wordEq) ^^ {
+      terms: (String ~ String ~ List[String]) => {
+        Assign(terms._1._1, terms._2.mkString("").replace("\\$", "$"))
       }
     }
 
