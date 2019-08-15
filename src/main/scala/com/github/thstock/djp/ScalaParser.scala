@@ -35,15 +35,15 @@ object ScalaParser extends RegexParsers {
     val indent = """[ \t]*""".r
     val spaceOpt = "[ ]*".r
     val space = "[ ]+".r
+    val noSpace = """\S+""".r
     val cont = """\"""
+    val word = """\w+""".r
+    val noQuote = """[^"]+""".r
+    val wordEq = """[\w=:{}]|\\\$""".r
 
     def contNl = spaceOpt ~ cont ~ nl ~> indent ^^ (term => ContNl(term))
 
-    def noQuoteEscapedQuote = "([^\\\\\"]|\\\\\"|\\\\#|\\\\n)".r
-
-    val word = """\w+""".r
-    val noQuote = """[^"]+""".r
-    val wordEq = """[\w=:{}]|(\\\$)""".r
+    def noQuoteEscapedQuote = "[^\\\\\"]|\\\\\"|\\\\#|\\\\n".r
 
     def quotedWord = {
       def re(in: String) = in.replace("\\\"", "\"")
@@ -60,8 +60,6 @@ object ScalaParser extends RegexParsers {
         })
       }
     }
-
-    val noSpace = """\S+""".r
 
     def assignErr = word ~ "=" ~ word ~ space ~> word <~ space ~ word >> {
       (x => {
@@ -129,13 +127,15 @@ object ScalaParser extends RegexParsers {
     def EXPOSE = "EXPOSE .*".r
 
     def ENV: Parser[Env] = {
-      def envAssign = assignP("ENV ") ^^ { assigns => Env(assigns) }
+      val envW = "ENV "
 
-      def envE = "ENV " ~> word ~ rep1(space ~ word) ^^ {
-        (terms) => Env(Seq(Assign(terms._1, terms._2.map(_._2).mkString(" "))))
+      def envAssign = assignP(envW) ^^ { assigns => Env(assigns) }
+
+      def envNoSpace = envW ~> word ~ space ~ ".+".r ^^ {
+        (terms) => Env(Seq(Assign(terms._1._1, terms._2)))
       }
 
-      envAssign | envE
+      envAssign | envNoSpace
     }
 
     def ADD = "ADD .*".r

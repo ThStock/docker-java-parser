@@ -197,10 +197,10 @@ public class DockerfileTest {
   @Test
   public void test_labels_multi_two() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a.s\"=\"b\" \"b\"=\"c\"");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL \"a.s\"=\"b.~,;\" \"b\"=\"c\"");
 
     // THEN
-    assertEquals(ImmutableMap.of("a.s", "b", "b", "c"), testee.getLabels());
+    assertEquals(ImmutableMap.of("a.s", "b.~,;", "b", "c"), testee.getLabels());
   }
 
   @Test
@@ -290,7 +290,9 @@ public class DockerfileTest {
         + "    myCat=fluffy");
 
     // THEN
-    assertEquals(ImmutableMap.of("myName", "John Doe", "myDog", "Rex The Dog", "myCat", "fluffy"),
+    assertEquals(ImmutableMap.of("myName", "John Doe",
+        "myDog", "Rex The Dog",
+        "myCat", "fluffy"),
         testee.getEnv());
   }
 
@@ -299,10 +301,14 @@ public class DockerfileTest {
     // GIVEN / WHEN
     Dockerfile testee = Dockerfile.parse("FROM a\nENV myName John Doe\n"
         + "ENV myDog Rex The Dog\n"
-        + "ENV myCat fluffy");
+        + "ENV myCat fluffy\n"
+        + "ENV version 1.13.8-1~str");
 
     // THEN
-    assertEquals(ImmutableMap.of("myName", "John Doe", "myDog", "Rex The Dog", "myCat", "fluffy"),
+    assertEquals(ImmutableMap.of("myName", "John Doe",
+        "myDog", "Rex The Dog",
+        "myCat", "fluffy",
+        "version", "1.13.8-1~str"),
         testee.getEnv());
   }
 
