@@ -215,19 +215,21 @@ public class DockerfileTest {
   @Test
   public void test_labels_multi_two_var() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b  b=c");
+    Dockerfile testee = Dockerfile.parse("FROM a\nENV o=0\nLABEL a=b  b=c");
 
     // THEN
+    assertEquals(ImmutableMap.of("o", "0"), testee.getEnv());
     assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
   }
 
   @Test
   public void test_labels_multiline() {
     // GIVEN / WHEN
-    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\\\n   b=c");
+    Dockerfile testee = Dockerfile.parse("FROM a\nLABEL a=b\\\n   b=c\nENV o=0");
 
     // THEN
     assertEquals(ImmutableMap.of("a", "b", "b", "c"), testee.getLabels());
+    assertEquals(ImmutableMap.of("o", "0"), testee.getEnv());
   }
 
   @Test
@@ -374,12 +376,14 @@ public class DockerfileTest {
     File content = Dockerfile.resourceFile("samples/Nginx");
 
     // WHEN
-    Dockerfile testee = Dockerfile.parseJStrict(content);
+    Dockerfile testee = Dockerfile.parse(content);
 
     // THEN
-    assertEquals(99, testee.allLines.size());
-    assertEquals(75, testee.lines.size());
-    assertEquals(ImmutableMap.of("maintainer", "NGINX Docker Maintainers <docker-maint@nginx.com>"), testee.getLabels());
+    assertEquals(ImmutableMap.of(
+        "maintainer", "NGINX Docker Maintainers <docker-maint@nginx.com>"), testee.getLabels());
+    assertEquals(ImmutableMap.of(
+        "NGINX_VERSION", "1.13.8-1~stretch",
+        "NJS_VERSION", "1.13.8.0.1.15-1~stretch"), testee.getEnv());
 
   }
 
